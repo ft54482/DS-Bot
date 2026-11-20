@@ -3,7 +3,7 @@
 本目录由试验仓 `tools/migrate/bundle.mjs` 打包生成：
 
 - 源仓库：`ft54482/superagent-lab-smoke`
-- 源 commit：`7887f886433061c9ca3e79d036d71376d8e33cc7`
+- 源 commit：`3405b3e3fb37ec868eef6145a6d72301b365484b`
 - 目标：作为 DS Bot fork 的**新增顶层目录**整体落地；DS Bot 既有文件保持不变
 
 ## 目录
@@ -13,6 +13,7 @@
 | `packages/` | 27 个任务运行层包（源码 + 各自 test） |
 | `tests/` | 跨包验收测试：conformance / contract / e2e / dod / regression |
 | `tools/` | 校验与运维脚本：verify / seed / perf / migrate |
+| `docs/prd/01-data-model.sql` | verify 所需的只读 schema 副本（自包含） |
 | `MIGRATION.json` | 打包清单：源 commit、生成时间、文件数、逐包 sha256 |
 
 ## 结构约束
@@ -50,6 +51,18 @@
 - `packages/store/` — `@dsbot/store`
 - `packages/verifier-agent/` — `@dsbot/verifier-agent`
 
+## 自包含与 cwd 无关
+
+`tools/verify/verify.mjs` 与 `tools/migrate/bundle.mjs` 都用 `import.meta.url` 解析路径，
+不依赖 `process.cwd()`；verify 需要的 schema 已作为只读副本写进本包的 `docs/prd/`。
+因此从任意工作目录都可以运行：
+
+```
+node <本目录>/tools/verify/verify.mjs
+node --test <本目录>/tools/migrate/test
+node --test <本目录>/tests/e2e
+```
+
 ## 校验
 
 ```
@@ -59,7 +72,7 @@ node tools/migrate/bundle.mjs --verify .
 node tools/migrate/bundle.mjs --verify <父目录>
 ```
 
-退出码 0 表示文件数与逐包/逐分区 sha256 全部匹配；非 0 时按输出逐条排查。
+退出码 0 表示文件数与逐包/逐分区 sha256 全部匹配，且清单里的包名列表与树内 `package.json` 一致；非 0 时按输出逐条排查。
 
 ## 回滚
 

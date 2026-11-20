@@ -35,9 +35,31 @@ node tools/migrate/bundle.mjs --verify $env:TEMP\mig1
 
 包含：`schemaVersion`、`sourceRepo`/`sourceCommit`/`sourceBranch`、`generatedAt`、
 `fileCount`、`totalBytes`、`sections`（packages/tests/tools 的文件数与聚合 sha256）、
-`packages[]`（每个包的目录、npm 名、文件数、聚合 sha256）、`unpackagedFiles`、
-`files[]`（逐文件 sha256）、`excludedDirNames`。完整字段说明见
+`packages[]`（每个包的目录、npm 名、文件数、聚合 sha256）、`packageNames`（实际发现
+的包名列表，`--verify` 会与树内 `package.json` 交叉校验）、`assets[]`（迁移树自包含
+所需的只读文件，如 schema 副本）、`unpackagedFiles`、`files[]`（逐文件 sha256）、
+`excludedDirNames`。完整字段说明见
 [`docs/migration/fork-migration-plan.md`](../../docs/migration/fork-migration-plan.md)。
+
+包数量不写死：打包时递归发现 `packages/` 下所有含 `package.json` 的目录，数量随仓库
+演进而变化，清单里记录当次实际结果。
+
+## 自包含与 cwd 无关
+
+`tools/verify/verify.mjs` 需要 `docs/prd/01-data-model.sql`。打包时会把该文件作为
+**只读副本**复制到 `<out>/dsbot-v3/docs/prd/01-data-model.sql` 并登记进 `assets[]`
+（二选一方案中的“复制 schema”，另一个“只依赖 `packages/store` 内的精简 schema”
+未采用，因为 verify 校验的是完整 PRD DDL）。只要源树包含 `tools/verify/`，缺少该
+schema 会让打包直接失败，避免产出跑不起来的迁移包。
+
+`tools/verify` 与 `tools/migrate` 都用 `import.meta.url` 解析路径，不读
+`process.cwd()`，所以迁移树可以在任意工作目录下自检：
+
+```powershell
+node <迁移树>/tools/verify/verify.mjs
+node --test <迁移树>/tools/migrate/test
+node --test <迁移树>/tests/e2e
+```
 
 ## 排除规则
 
@@ -47,12 +69,14 @@ node tools/migrate/bundle.mjs --verify $env:TEMP\mig1
 ## 测试
 
 ```powershell
-node --test tools/migrate/test          # 17 个用例
+node --test tools/migrate/test          # 22 个用例
 ```
 
 覆盖：目标布局、排除规则、MIGRATION.json 字段与磁盘一致性、幂等重跑、`SOURCE_DATE_EPOCH`
-可复现、`--out` 在源目录内不自复制、拒绝覆盖源目录、真实仓库冒烟（23 包）、校验通过、
-内容篡改/删除/多出文件/清单被改后失败、CLI 退出码（0/1/2）。
+可复现、`--out` 在源目录内不自复制、拒绝覆盖源目录、真实仓库冒烟（动态发现包并校验
+schema 副本）、校验通过、内容篡改/删除/多出文件/清单被改后失败、包名与清单不一致时
+失败、schema 资产篡改后失败、迁移树在任意 cwd 下 verify 通过、schema 缺失时的明确报错、
+CLI 退出码（0/1/2）。
 
 > `tools/migrate/test/package.json` 的 `main` 让 `node --test tools/migrate/test` 在
 > Node 25.2.0（实测该版本不展开目录参数）下也能解析到 `run-all.mjs` 聚合入口。

@@ -6,9 +6,9 @@
     "entry": "tools/migrate/bundle.mjs"
   },
   "sourceRepo": "ft54482/superagent-lab-smoke",
-  "sourceCommit": "7887f886433061c9ca3e79d036d71376d8e33cc7",
+  "sourceCommit": "3405b3e3fb37ec868eef6145a6d72301b365484b",
   "sourceBranch": null,
-  "generatedAt": "2026-11-20T17:56:33.373Z",
+  "generatedAt": "2026-11-20T18:25:54.282Z",
   "generatedAtSource": "clock",
   "bundleRoot": "dsbot-v3",
   "excludedDirNames": [
@@ -17,8 +17,8 @@
     "tmp",
     ".git"
   ],
-  "fileCount": 431,
-  "totalBytes": 2147883,
+  "fileCount": 433,
+  "totalBytes": 2194247,
   "sections": {
     "packages": {
       "fileCount": 388,
@@ -31,9 +31,9 @@
       "sha256": "8082cc502aceaf9ec477721868ee267a390d2d0962fe857513122c7319c3b3e9"
     },
     "tools": {
-      "fileCount": 13,
-      "bytes": 107621,
-      "sha256": "7b14ab368671aa78272b9fce0b59f848f13f5c88a2420c2e71d92dd83c6dd428"
+      "fileCount": 14,
+      "bytes": 124150,
+      "sha256": "837d907725018d7c6a1ef322cc56ace3e6c1ff00ef603a54045dd5244dae727b"
     }
   },
   "packages": [
@@ -227,12 +227,53 @@
       "sha256": "8a4ed7902600b2369f38d9baa612d6ee00c2433cd89ad3ecde1e7daea9b17ff2"
     }
   ],
+  "packageNames": [
+    "@ds-bot/adapters",
+    "@ds-bot/bridge",
+    "@ds-bot/demo",
+    "@ds-bot/pipelines-content",
+    "@ds-bot/pipelines-selfmedia",
+    "@dsbot-v3/cli",
+    "@dsbot-v3/service",
+    "@dsbot/acceptance",
+    "@dsbot/agents",
+    "@dsbot/api",
+    "@dsbot/authz",
+    "@dsbot/autoloop",
+    "@dsbot/context",
+    "@dsbot/cost",
+    "@dsbot/events",
+    "@dsbot/goal-engine",
+    "@dsbot/loop",
+    "@dsbot/metrics",
+    "@dsbot/monitor",
+    "@dsbot/notify",
+    "@dsbot/profiles",
+    "@dsbot/provisioner",
+    "@dsbot/recovery",
+    "@dsbot/runtime",
+    "@dsbot/scheduler",
+    "@dsbot/store",
+    "@dsbot/verifier-agent"
+  ],
+  "assets": [
+    {
+      "path": "docs/prd/01-data-model.sql",
+      "bytes": 29283,
+      "sha256": "5d460481c3b5ec1c0fc3a68b3cb4083740dbe08e155019251cc9341a7a147e63"
+    }
+  ],
   "unpackagedFiles": [],
   "files": [
     {
       "path": "README.md",
-      "bytes": 2583,
-      "sha256": "c9cfa20c9efffcadfddc278581af066663bf2a14a8ed3bbb0e87aea5ff57c4fb"
+      "bytes": 3135,
+      "sha256": "d8f9065ccd2942cab2959b47ba3ce5207e42b5e84a7e75a7ae60325cfef4f28a"
+    },
+    {
+      "path": "docs/prd/01-data-model.sql",
+      "bytes": 29283,
+      "sha256": "5d460481c3b5ec1c0fc3a68b3cb4083740dbe08e155019251cc9341a7a147e63"
     },
     {
       "path": "packages/acceptance/README.md",
@@ -2321,18 +2362,18 @@
     },
     {
       "path": "tools/migrate/README.md",
-      "bytes": 2720,
-      "sha256": "3698605dbda13e7a267957cd95a0ad04f804e45bde168dcdd6bccabb3f4b6326"
+      "bytes": 4070,
+      "sha256": "a3cf64b9598e85705c8bff549cdde268c850d68d0dbf401b0a02d7dbd38378e9"
     },
     {
       "path": "tools/migrate/bundle.mjs",
-      "bytes": 31335,
-      "sha256": "bf418339d759d37193db1dc6ce274a6a4799c12c2f07a74d75b95988d1425ff1"
+      "bytes": 36758,
+      "sha256": "21de94868335f51758924569febdfc66245f7ac5ae53fa281db716f1d7e8c92e"
     },
     {
       "path": "tools/migrate/test/bundle.test.mjs",
-      "bytes": 11584,
-      "sha256": "dd89714d69db07804158ee8f84b37def0834e01a3c8e3f7a0ef016ce79ae9be6"
+      "bytes": 13130,
+      "sha256": "73cc1ec8c491a6dc75f0b31cdae7c09a288db7669c95f62265f15100b781113d"
     },
     {
       "path": "tools/migrate/test/package.json",
@@ -2341,18 +2382,23 @@
     },
     {
       "path": "tools/migrate/test/run-all.mjs",
-      "bytes": 651,
-      "sha256": "b8852daaf43f6a80c91cb738638c6e5d2632c664af4a3852856d9036b3a6c9ec"
+      "bytes": 687,
+      "sha256": "b3487dccab16dbd681e17f885563931b425e77b524873b5932bd8f92488277c8"
+    },
+    {
+      "path": "tools/migrate/test/selfcontained.test.mjs",
+      "bytes": 3416,
+      "sha256": "1cc02af887526320cf9e0bf48aa91a617380f3205cf4100542418411c5781d02"
     },
     {
       "path": "tools/migrate/test/support/fixtures.mjs",
-      "bytes": 3849,
-      "sha256": "eaa077c1cfe56de7fe94bc3067afb66fa54276b04f5e8c34d38864573031b520"
+      "bytes": 4784,
+      "sha256": "4904116a2687ab140b6dcb85cd4eb3ae11bc2c8c38b477bf58a2b0bb07895638"
     },
     {
       "path": "tools/migrate/test/verify.test.mjs",
-      "bytes": 6046,
-      "sha256": "d9e7d0d5d6ef9b13f32f8fe619a87ac277c2d40759cc2aace5e55e66d912a0c9"
+      "bytes": 7769,
+      "sha256": "97f9ad88fe5be1dcb1d73a3738311ec8e4db426a1ef6db6ee9ae5d6b560c9762"
     },
     {
       "path": "tools/perf/README.md",
@@ -2376,13 +2422,13 @@
     },
     {
       "path": "tools/verify/README.md",
-      "bytes": 1269,
-      "sha256": "56ea1986f65f3ab9d0c56d98698fe06ce3b9d196f94f3c74568ad2d7df17eb31"
+      "bytes": 2227,
+      "sha256": "7eb5e1db934029dc38435bc44e05b7afc2a6b3ff70062c929972714e197f00ea"
     },
     {
       "path": "tools/verify/verify.mjs",
-      "bytes": 8714,
-      "sha256": "bbeec96bfd9be028635170f03589cecbd30c44a33acd8f6e50fa80b138671fcc"
+      "bytes": 9856,
+      "sha256": "f59d0058e2b08fd7d4e55b2da89405f0c01ec08564df7c35e02682c06b11b170"
     }
   ]
 }

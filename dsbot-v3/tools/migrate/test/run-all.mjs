@@ -14,3 +14,4 @@
 
 import './bundle.test.mjs';
 import './verify.test.mjs';
+import './selfcontained.test.mjs';

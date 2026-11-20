@@ -5,18 +5,26 @@
 // (node:sqlite, no npm dependencies) and proves that the schema can be created
 // and that the structural guards really reject invalid writes.
 //
-// Usage: node tools/verify/verify.mjs
+// Usage: node tools/verify/verify.mjs (from any working directory)
 // Exit code: 0 when every check passes, 1 otherwise.
 
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+// This file lives at <root>/tools/verify/verify.mjs. Every path below is
+// derived from import.meta.url, never from process.cwd(), so the tree can be
+// executed from any working directory (repo root, a migrated subdirectory, or
+// an unrelated cwd).
+const toolsDir = dirname(fileURLToPath(import.meta.url));
+const root = resolve(toolsDir, '..', '..');
 const ddlRel = 'docs/prd/01-data-model.sql';
-const ddlPath = resolve(repoRoot, ddlRel);
+const ddlPath = join(root, ...ddlRel.split('/'));
+// In-memory database: no repository-relative DB file, no left-over state.
+// The location is a constant, so repeated runs see exactly the same database.
+const dbLocation = ':memory:';
 const now = Date.now();
 
 const results = [];
@@ -25,6 +33,22 @@ let ddlDigest = 'unavailable';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+/**
+ * The connection is opened by the first check. If that check fails (for
+ * example because a migration bundle forgot to copy the DDL), later checks must
+ * report the missing schema instead of throwing a TypeError on `undefined`.
+ */
+function dbRequired() {
+  if (!db) {
+    throw new Error(`schema unavailable: ${ddlRel} was not loaded (expected ${ddlPath})`);
+  }
+  return db;
+}
+
+function prepare(sql) {
+  return dbRequired().prepare(sql);
 }
 
 function check(name, fn) {
@@ -38,10 +62,9 @@ function check(name, fn) {
 }
 
 function objectNames(type) {
-  return db
-    .prepare(
-      "SELECT name FROM sqlite_master WHERE type = ? AND name NOT LIKE 'sqlite_%' ORDER BY name",
-    )
+  return prepare(
+    "SELECT name FROM sqlite_master WHERE type = ? AND name NOT LIKE 'sqlite_%' ORDER BY name",
+  )
     .all(type)
     .map((row) => row.name);
 }
@@ -58,7 +81,7 @@ function expectSqlError(fn, pattern) {
 }
 
 function insertTask({ id, level, state, parentTaskId = null }) {
-  db.prepare(
+  prepare(
     `INSERT INTO task (
        id, level, title, goal, project, state,
        parent_task_id, delegator_kind, delegator_ref, owner_ref,
@@ -81,7 +104,7 @@ function insertTask({ id, level, state, parentTaskId = null }) {
 }
 
 function insertAcceptance({ id, stage, taskId, state }) {
-  db.prepare(
+  prepare(
     `INSERT INTO acceptance (
        id, stage, target_task_id, state, mode, criteria_json, created_at
      ) VALUES (?, ?, ?, ?, 'auto', '[]', ?)`,
@@ -92,10 +115,15 @@ function insertAcceptance({ id, stage, taskId, state }) {
 // 1. The DDL must execute on a fresh in-memory database.
 // ---------------------------------------------------------------------------
 check(`execute ${ddlRel} on an in-memory node:sqlite database`, () => {
+  if (!existsSync(ddlPath)) {
+    throw new Error(
+      `schema not found: ${ddlPath} (expected ${ddlRel} beside tools/; a migrated dsbot-v3 tree must carry the copied schema)`,
+    );
+  }
   const sql = readFileSync(ddlPath, 'utf8');
   assert(sql.trim().length > 0, `${ddlRel} is empty`);
   ddlDigest = createHash('sha256').update(sql).digest('hex').slice(0, 16);
-  db = new DatabaseSync(':memory:');
+  db = new DatabaseSync(dbLocation);
   db.exec(sql);
   return `${(sql.length / 1024).toFixed(1)} KiB applied`;
 });
@@ -132,7 +160,7 @@ check('trigger count = 3 (including trg_completed_guard)', () => {
 });
 
 check('schema_version has a record', () => {
-  const rows = db.prepare('SELECT version, applied_at FROM schema_version ORDER BY version').all();
+  const rows = prepare('SELECT version, applied_at FROM schema_version ORDER BY version').all();
   assert(rows.length > 0, 'schema_version is empty');
   return rows.map((row) => `version=${row.version} applied_at=${row.applied_at}`).join('; ');
 });
@@ -145,16 +173,16 @@ check('guard 1 rejects completion without a passed acceptance at this level', ()
   insertTask({ id: 'task-guard-1', level: 'goal', state: 'accepting' });
 
   const firstError = expectSqlError(
-    () => db.prepare("UPDATE task SET state = 'completed' WHERE id = ?").run('task-guard-1'),
+    () => prepare("UPDATE task SET state = 'completed' WHERE id = ?").run('task-guard-1'),
     /cannot complete/,
   );
-  const stateAfterFirst = db.prepare('SELECT state FROM task WHERE id = ?').get('task-guard-1').state;
+  const stateAfterFirst = prepare('SELECT state FROM task WHERE id = ?').get('task-guard-1').state;
   assert(stateAfterFirst === 'accepting', `task state changed to ${stateAfterFirst} after rejection`);
 
   // A passed acceptance for a different stage must not satisfy the goal level.
   insertAcceptance({ id: 'acc-wrong-level', stage: 'business', taskId: 'task-guard-1', state: 'passed' });
   expectSqlError(
-    () => db.prepare("UPDATE task SET state = 'completed' WHERE id = ?").run('task-guard-1'),
+    () => prepare("UPDATE task SET state = 'completed' WHERE id = ?").run('task-guard-1'),
     /cannot complete/,
   );
 
@@ -163,8 +191,8 @@ check('guard 1 rejects completion without a passed acceptance at this level', ()
 
 check('guard 1 allows completion once a passed acceptance exists at this level', () => {
   insertAcceptance({ id: 'acc-goal-level', stage: 'goal', taskId: 'task-guard-1', state: 'passed' });
-  db.prepare("UPDATE task SET state = 'completed' WHERE id = ?").run('task-guard-1');
-  const state = db.prepare('SELECT state FROM task WHERE id = ?').get('task-guard-1').state;
+  prepare("UPDATE task SET state = 'completed' WHERE id = ?").run('task-guard-1');
+  const state = prepare('SELECT state FROM task WHERE id = ?').get('task-guard-1').state;
   assert(state === 'completed', `expected state completed, got ${state}`);
   return 'goal-level passed acceptance accepted; task state = completed';
 });
@@ -186,8 +214,7 @@ check('guard 2 rejects an execution task directly under a goal', () => {
     /invalid task hierarchy/,
   );
 
-  const inserted = db
-    .prepare('SELECT COUNT(*) AS n FROM task WHERE id = ?')
+  const inserted = prepare('SELECT COUNT(*) AS n FROM task WHERE id = ?')
     .get('task-exec-under-goal').n;
   assert(inserted === 0, 'rejected execution task was still inserted');
   return `rejected: "${error}"`;
@@ -200,8 +227,7 @@ check('guard 2 still allows an adjacent business task under a goal', () => {
     state: 'planned',
     parentTaskId: 'task-goal-2',
   });
-  const count = db
-    .prepare('SELECT COUNT(*) AS n FROM task WHERE id = ?')
+  const count = prepare('SELECT COUNT(*) AS n FROM task WHERE id = ?')
     .get('task-business-under-goal').n;
   assert(count === 1, 'valid adjacent child was not inserted');
   return 'goal -> business insert accepted';
@@ -214,8 +240,8 @@ const failed = results.filter((item) => !item.ok);
 const passed = results.length - failed.length;
 
 console.log('DS Bot V3 DDL verifier');
-console.log(`DDL:    ${ddlRel} (sha256 ${ddlDigest})`);
-console.log(`SQLite: ${db ? db.prepare('SELECT sqlite_version() AS v').get().v : 'not opened'} (node:sqlite, in-memory)`);
+console.log(`DDL:    ${ddlRel} (${ddlPath}, sha256 ${ddlDigest})`);
+console.log(`SQLite: ${db ? prepare('SELECT sqlite_version() AS v').get().v : 'not opened'} (node:sqlite, ${dbLocation})`);
 console.log(`Node:   ${process.version}`);
 console.log('');
 

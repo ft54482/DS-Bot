@@ -10,8 +10,8 @@ import { appendFile, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
 
-import { BUNDLE_DIR_NAME, MANIFEST_FILE_NAME, bundle, verify } from '../bundle.mjs';
-import { cleanup, makeFixtureSource, makeTempDir, runCli } from './support/fixtures.mjs';
+import { BUNDLE_DIR_NAME, MANIFEST_FILE_NAME, VERIFY_SCHEMA_ASSET, bundle, verify } from '../bundle.mjs';
+import { cleanup, makeFixtureSource, makeTempDir, runCli, writeFiles } from './support/fixtures.mjs';
 
 const FIXED_TIME = '2026-01-02T03:04:05.000Z';
 
@@ -120,6 +120,41 @@ test('真实 CLI 退出码：生成 0 → 校验 0 → 篡改后校验 1', async
   const badVerify = runCli(['--verify', out]);
   assert.equal(badVerify.status, 1, '篡改后校验必须退出 1');
   assert.match(badVerify.stderr, /FAILED/);
+});
+
+test('schema 资产随迁移包复制，篡改后校验失败', async (t) => {
+  const workspace = await makeTempDir();
+  t.after(() => cleanup(workspace));
+  const source = path.join(workspace, 'source');
+  await makeFixtureSource(source);
+  await writeFiles(source, { [VERIFY_SCHEMA_ASSET]: 'CREATE TABLE demo (id TEXT PRIMARY KEY);\n' });
+
+  const out = path.join(workspace, 'out');
+  const built = await bundle({ root: source, out, generatedAt: FIXED_TIME });
+  const assetPath = path.join(built.bundleDir, ...VERIFY_SCHEMA_ASSET.split('/'));
+
+  assert.equal(existsSync(assetPath), true, 'schema 资产必须出现在迁移包中');
+  assert.deepEqual(built.manifest.assets.map((asset) => asset.path), [VERIFY_SCHEMA_ASSET]);
+
+  const ok = await verify({ dir: built.bundleDir });
+  assert.equal(ok.ok, true, ok.errors.join('; '));
+
+  await appendFile(assetPath, '-- tampered\n');
+  const bad = await verify({ dir: built.bundleDir });
+  assert.equal(bad.ok, false);
+  assert.ok(bad.errors.some((error) => error.includes('内容被改动') && error.includes(VERIFY_SCHEMA_ASSET)));
+});
+
+test('package.json 的 name 与清单不一致时校验失败', async (t) => {
+  const { bundleDir } = await prepare(t);
+  const pkgPath = path.join(bundleDir, 'packages/alpha/package.json');
+  const pkg = JSON.parse(await readFile(pkgPath, 'utf8'));
+  pkg.name = '@tampered/alpha';
+  await writeFile(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+
+  const result = await verify({ dir: bundleDir });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes('package.json name 不匹配') && error.includes('packages/alpha')));
 });
 
 test('CLI 参数错误返回 2，--help 返回 0', async (t) => {

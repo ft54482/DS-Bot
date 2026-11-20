@@ -16,10 +16,11 @@ import {
   MANIFEST_FILE_NAME,
   SECTIONS,
   SCHEMA_VERSION,
+  VERIFY_SCHEMA_ASSET,
   bundle,
   digestFiles,
 } from '../bundle.mjs';
-import { REPO_ROOT, cleanup, makeFixtureSource, makeTempDir, writeFiles } from './support/fixtures.mjs';
+import { REPO_ROOT, cleanup, listPackageDirs, makeFixtureSource, makeTempDir, writeFiles } from './support/fixtures.mjs';
 
 async function readManifest(bundleDir) {
   return JSON.parse(await readFile(path.join(bundleDir, MANIFEST_FILE_NAME), 'utf8'));
@@ -129,11 +130,14 @@ test('MIGRATION.json 字段齐全且与磁盘一致', async (t) => {
   const dirs = manifest.packages.map((pkg) => pkg.dir);
   assert.deepEqual(dirs, ['packages/alpha', 'packages/beta', 'packages/nested/group/gamma']);
   assert.deepEqual(manifest.packages.map((pkg) => pkg.name), ['@fixture/alpha', '@fixture/beta', '@fixture/gamma']);
+  assert.deepEqual(manifest.packageNames, ['@fixture/alpha', '@fixture/beta', '@fixture/gamma']);
   assert.equal(manifest.packages.find((pkg) => pkg.dir === 'packages/alpha').fileCount, 4);
   for (const pkg of manifest.packages) {
     assert.match(pkg.sha256, /^[0-9a-f]{64}$/);
     assert.ok(pkg.fileCount > 0);
   }
+  // the fixture source has no docs/, so no schema asset is expected
+  assert.deepEqual(manifest.assets, []);
   // files that belong to no package are reported, not silently dropped
   assert.deepEqual(manifest.unpackagedFiles, ['packages/stray.txt']);
   // section table covers exactly the three migrated trees
@@ -216,19 +220,47 @@ test('--out 指向源目录本身时拒绝执行（防覆盖）', async (t) => {
   await assert.rejects(() => bundle({ root: source }), /缺少 --out/);
 });
 
-test('真实仓库冒烟：23 个包、三个分区，verify 通过', async (t) => {
+test('真实仓库冒烟：动态发现包、schema 资产与三个分区，verify 通过', async (t) => {
   const out = await makeTempDir('dsh-migrate-repo-');
   t.after(() => cleanup(out));
 
   const result = await bundle({ root: REPO_ROOT, out, generatedAt: '2026-01-02T03:04:05.000Z' });
+  const bundleDir = result.bundleDir;
 
   assert.ok(result.manifest.fileCount > 300, `真实仓库应有 300+ 文件，实际 ${result.manifest.fileCount}`);
-  assert.equal(result.manifest.packages.length, 23, '试验仓当前有 23 个含 package.json 的包');
+
+  // The package inventory is discovered from the source tree, never hard-coded,
+  // and the actual list is recorded verbatim in the manifest.
+  const expectedDirs = (await listPackageDirs(path.join(REPO_ROOT, 'packages'))).map((dir) => `packages/${dir}`);
+  assert.ok(expectedDirs.length >= 23, `试验仓应至少有 23 个包，实际 ${expectedDirs.length}`);
+  assert.deepEqual(
+    result.manifest.packages.map((pkg) => pkg.dir),
+    expectedDirs,
+    `清单应记录实际发现的 ${expectedDirs.length} 个包`,
+  );
+  assert.deepEqual(
+    result.manifest.packageNames.slice().sort(),
+    result.manifest.packages.map((pkg) => pkg.name).sort(),
+    'packageNames 应与 packages[].name 一致',
+  );
   assert.ok(result.manifest.packages.some((pkg) => pkg.dir === 'packages/pipelines/content'));
   assert.ok(result.manifest.packages.some((pkg) => pkg.dir === 'packages/pipelines/selfmedia'));
+
+  // The schema copy required by tools/verify must be in the bundle byte-for-byte.
+  assert.deepEqual(result.manifest.assets.map((asset) => asset.path), [VERIFY_SCHEMA_ASSET]);
+  assert.equal(
+    await readFile(path.join(bundleDir, ...VERIFY_SCHEMA_ASSET.split('/')), 'utf8'),
+    await readFile(path.join(REPO_ROOT, ...VERIFY_SCHEMA_ASSET.split('/')), 'utf8'),
+    'schema 资产必须逐字节复制',
+  );
+
   assert.ok(result.manifest.sections.tests.fileCount > 10);
   assert.ok(result.manifest.sections.tools.fileCount > 8);
-  assert.match(result.manifest.sourceCommit, /^[0-9a-f]{40}$/, '从 git 检出打包时应记录 40 位 commit');
+  if (existsSync(path.join(REPO_ROOT, '.git'))) {
+    assert.match(result.manifest.sourceCommit, /^[0-9a-f]{40}$/, '从 git 检出打包时应记录 40 位 commit');
+  } else {
+    assert.equal(result.manifest.sourceCommit, 'unknown', '迁移树没有 .git，应记录 unknown 而不是猜测');
+  }
   assert.deepEqual(result.manifest.unpackagedFiles, []);
   for (const section of SECTIONS) {
     assert.ok(result.manifest.sections[section].fileCount > 0);

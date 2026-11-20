@@ -6,9 +6,10 @@
  * ready-to-land bundle with the target layout:
  *
  *   <out>/dsbot-v3/
- *     packages/       (23 packages, unchanged relative layout)
+ *     packages/       (every discovered package, unchanged relative layout)
  *     tests/
  *     tools/
+ *     docs/prd/       (read-only schema assets required by tools/verify)
  *     README.md       (generated provenance / verification notes)
  *     MIGRATION.json  (source commit, generation time, file count, per-package sha256)
  *
@@ -39,6 +40,10 @@ export const SCHEMA_VERSION = 1;
 export const BUNDLE_DIR_NAME = 'dsbot-v3';
 export const MANIFEST_FILE_NAME = 'MIGRATION.json';
 export const SECTIONS = ['packages', 'tests', 'tools'];
+/** Schema consumed by tools/verify/verify.mjs; a bundle that ships verify must carry it. */
+export const VERIFY_SCHEMA_ASSET = 'docs/prd/01-data-model.sql';
+/** Read-only files the migrated tree needs at runtime, copied verbatim. */
+export const ASSET_FILES = [VERIFY_SCHEMA_ASSET];
 /** Excluded directory names, matched at any depth. */
 export const EXCLUDED_DIR_NAMES = ['.agent', 'node_modules', 'tmp', '.git'];
 export const GENERATOR = {
@@ -223,7 +228,7 @@ export async function walkFiles(base, options = {}) {
 /* bundle                                                             */
 /* ------------------------------------------------------------------ */
 
-function renderBundleReadme({ sourceRepo, sourceCommit, packages }) {
+function renderBundleReadme({ sourceRepo, sourceCommit, packages, assets }) {
   const lines = [];
   lines.push('# DS Bot V3 任务运行层（dsbot-v3）');
   lines.push('');
@@ -240,6 +245,9 @@ function renderBundleReadme({ sourceRepo, sourceCommit, packages }) {
   lines.push(`| \`packages/\` | ${packages.length} 个任务运行层包（源码 + 各自 test） |`);
   lines.push('| `tests/` | 跨包验收测试：conformance / contract / e2e / dod / regression |');
   lines.push('| `tools/` | 校验与运维脚本：verify / seed / perf / migrate |');
+  for (const asset of assets) {
+    lines.push(`| \`${asset.path}\` | verify 所需的只读 schema 副本（自包含） |`);
+  }
   lines.push('| `MIGRATION.json` | 打包清单：源 commit、生成时间、文件数、逐包 sha256 |');
   lines.push('');
   lines.push('## 结构约束');
@@ -253,6 +261,18 @@ function renderBundleReadme({ sourceRepo, sourceCommit, packages }) {
     lines.push(`- \`${pkg.dir}/\` — \`${pkg.name}\``);
   }
   lines.push('');
+  lines.push('## 自包含与 cwd 无关');
+  lines.push('');
+  lines.push('`tools/verify/verify.mjs` 与 `tools/migrate/bundle.mjs` 都用 `import.meta.url` 解析路径，');
+  lines.push('不依赖 `process.cwd()`；verify 需要的 schema 已作为只读副本写进本包的 `docs/prd/`。');
+  lines.push('因此从任意工作目录都可以运行：');
+  lines.push('');
+  lines.push('```');
+  lines.push('node <本目录>/tools/verify/verify.mjs');
+  lines.push('node --test <本目录>/tools/migrate/test');
+  lines.push('node --test <本目录>/tests/e2e');
+  lines.push('```');
+  lines.push('');
   lines.push('## 校验');
   lines.push('');
   lines.push('```');
@@ -262,7 +282,7 @@ function renderBundleReadme({ sourceRepo, sourceCommit, packages }) {
   lines.push('node tools/migrate/bundle.mjs --verify <父目录>');
   lines.push('```');
   lines.push('');
-  lines.push('退出码 0 表示文件数与逐包/逐分区 sha256 全部匹配；非 0 时按输出逐条排查。');
+  lines.push('退出码 0 表示文件数与逐包/逐分区 sha256 全部匹配，且清单里的包名列表与树内 `package.json` 一致；非 0 时按输出逐条排查。');
   lines.push('');
   lines.push('## 回滚');
   lines.push('');
@@ -341,6 +361,28 @@ export async function bundle(options = {}) {
     }
   }
 
+  // Read-only assets that make the bundle self-contained. A bundle that ships
+  // tools/verify must carry the schema; without it verify only works inside the
+  // lab repository, where docs/prd/ happens to exist.
+  const shipVerify = existsSync(path.join(root, 'tools', 'verify', 'verify.mjs'));
+  const assets = [];
+  for (const assetRel of ASSET_FILES) {
+    const sourcePath = path.join(root, ...assetRel.split('/'));
+    if (!existsSync(sourcePath)) {
+      const message = `源目录缺少 verify 所需的 schema 资产 ${assetRel}`;
+      if (shipVerify) throw new MigrationError(message, 'E_ASSET');
+      warnings.push(`${message}，迁移树中的 verify 将无法运行`);
+      continue;
+    }
+    const buffer = await readFile(sourcePath);
+    const destination = path.join(bundleDir, ...assetRel.split('/'));
+    await mkdir(path.dirname(destination), { recursive: true });
+    await writeFile(destination, buffer);
+    const record = { path: assetRel, bytes: buffer.length, sha256: sha256(buffer) };
+    files.push(record);
+    assets.push(record);
+  }
+
   // generated README (kept deterministic: no timestamps, only source commit)
   const packageDirs = [...new Set(
     files
@@ -363,6 +405,11 @@ export async function bundle(options = {}) {
     });
   }
 
+  const packageNames = packageDescriptors
+    .map((descriptor) => descriptor.name)
+    .filter((name) => typeof name === 'string' && name.length > 0)
+    .sort(byCodepoint);
+
   const covered = new Set();
   for (const descriptor of packageDescriptors) {
     for (const file of files) {
@@ -378,6 +425,7 @@ export async function bundle(options = {}) {
     sourceRepo,
     sourceCommit,
     packages: packageDescriptors,
+    assets,
   });
   const readmeBuffer = Buffer.from(readme, 'utf8');
   await writeFile(path.join(bundleDir, README_FILE_NAME), readmeBuffer);
@@ -409,6 +457,8 @@ export async function bundle(options = {}) {
     totalBytes: sumBytes(files),
     sections,
     packages: packageDescriptors,
+    packageNames,
+    assets,
     unpackagedFiles,
     files,
   };
@@ -466,6 +516,23 @@ function checkManifestShape(manifest, errors) {
     }
     if (!Number.isInteger(descriptor.fileCount) || descriptor.fileCount < 0) {
       errors.push(`包 ${descriptor.dir} 的 fileCount 非法`);
+    }
+  }
+  if (!Array.isArray(manifest.packageNames)) {
+    errors.push('packageNames 不是数组');
+    return false;
+  }
+  if (manifest.packageNames.some((name) => typeof name !== 'string' || name.length === 0)) {
+    errors.push('packageNames 含非法条目');
+  }
+  if (!Array.isArray(manifest.assets)) {
+    errors.push('assets 不是数组');
+    return false;
+  }
+  for (const [index, asset] of manifest.assets.entries()) {
+    if (!asset || typeof asset.path !== 'string' || typeof asset.sha256 !== 'string' || !HEX64.test(asset.sha256)) {
+      errors.push(`assets[${index}] 形状非法（需要 path 与 sha256）`);
+      break;
     }
   }
   for (const section of SECTIONS) {
@@ -545,7 +612,6 @@ export async function verify(options = {}) {
   }
 
   // per-package digests
-  const packageNames = new Set();
   for (const descriptor of manifest.packages) {
     const actualPkg = actual.filter((file) => file.path.startsWith(`${descriptor.dir}/`));
     const actualDigest = digestFiles(actualPkg);
@@ -555,7 +621,43 @@ export async function verify(options = {}) {
     if (descriptor.sha256 !== actualDigest) {
       errors.push(`包 ${descriptor.dir} sha256 不匹配: 清单 ${descriptor.sha256.slice(0, 12)}…，实际 ${actualDigest.slice(0, 12)}…`);
     }
-    packageNames.add(descriptor.dir);
+  }
+
+  // The manifest's package inventory must match the package.json files on disk,
+  // so a package can neither disappear from nor appear in the tree unnoticed.
+  const actualPackageDirs = actual
+    .filter((file) => /^packages\/(?:.+\/)?package\.json$/.test(file.path))
+    .map((file) => file.path.slice(0, -'/package.json'.length))
+    .sort(byCodepoint);
+  const manifestPackageDirs = manifest.packages.map((descriptor) => descriptor.dir).slice().sort(byCodepoint);
+  if (actualPackageDirs.join('\n') !== manifestPackageDirs.join('\n')) {
+    errors.push(`包清单与树内 package.json 不一致: 清单 ${manifestPackageDirs.length} 个，实际 ${actualPackageDirs.length} 个`);
+  }
+  const expectedPackageNames = manifest.packages
+    .map((descriptor) => descriptor.name)
+    .filter((name) => typeof name === 'string' && name.length > 0)
+    .sort(byCodepoint);
+  if (manifest.packageNames.slice().sort(byCodepoint).join('\n') !== expectedPackageNames.join('\n')) {
+    errors.push('packageNames 与 packages[].name 不一致');
+  }
+  for (const descriptor of manifest.packages) {
+    const pkgPath = path.join(bundleDir, ...descriptor.dir.split('/'), 'package.json');
+    try {
+      const pkg = JSON.parse(await readFile(pkgPath, 'utf8'));
+      const actualName = typeof pkg.name === 'string' ? pkg.name : null;
+      if (actualName !== descriptor.name) {
+        errors.push(`包 ${descriptor.dir} 的 package.json name 不匹配: 清单 ${JSON.stringify(descriptor.name)}，实际 ${JSON.stringify(actualName)}`);
+      }
+    } catch (error) {
+      errors.push(`包 ${descriptor.dir} 的 package.json 读取失败: ${error.message}`);
+    }
+  }
+
+  // read-only schema assets: recorded by the manifest and present on disk
+  for (const asset of manifest.assets) {
+    if (!existsSync(path.join(bundleDir, ...asset.path.split('/')))) {
+      errors.push(`缺少迁移资产: ${asset.path}`);
+    }
   }
 
   // every packaged file must be covered by exactly one package descriptor
@@ -595,6 +697,10 @@ export async function verify(options = {}) {
   // expected layout sanity
   for (const required of ['packages', 'tests', 'tools', README_FILE_NAME]) {
     if (!existsSync(path.join(bundleDir, required))) errors.push(`缺少目标布局条目: ${required}`);
+  }
+  if (existsSync(path.join(bundleDir, 'tools', 'verify', 'verify.mjs'))
+    && !manifest.assets.some((asset) => asset.path === VERIFY_SCHEMA_ASSET)) {
+    errors.push(`缺少 verify 所需的 schema 资产: ${VERIFY_SCHEMA_ASSET}（迁移树必须自包含）`);
   }
   if (manifest.sourceCommit === 'unknown') {
     warnings.push('清单中的 sourceCommit 为 unknown（打包时源目录不是 git 检出）');
@@ -728,7 +834,7 @@ export async function main(argv = process.argv.slice(2), io = {}) {
       log(`[bundle] 源目录: ${path.resolve(options.root ?? defaultRoot())}`);
       log(`[bundle] 源 commit: ${result.manifest.sourceCommit}${result.manifest.sourceBranch ? `（分支 ${result.manifest.sourceBranch}）` : ''}`);
       log(`[bundle] 目标: ${result.bundleDir}`);
-      log(`[bundle] 已生成: ${result.manifest.fileCount} 个文件, ${formatBytes(result.manifest.totalBytes)}, ${result.manifest.packages.length} 个包`);
+      log(`[bundle] 已生成: ${result.manifest.fileCount} 个文件, ${formatBytes(result.manifest.totalBytes)}, ${result.manifest.packages.length} 个包, ${result.manifest.assets.length} 个 schema 资产`);
       for (const warning of result.warnings) log(`[bundle] 警告: ${warning}`);
       log(`[bundle] 清单: ${result.manifestPath}`);
     } catch (error) {
@@ -743,7 +849,7 @@ export async function main(argv = process.argv.slice(2), io = {}) {
       const result = await verify({ dir: verifyDir });
       if (result.bundleDir) log(`[verify] 目标: ${result.bundleDir}`);
       if (result.manifest) {
-        log(`[verify] 清单: sourceCommit=${result.manifest.sourceCommit} fileCount=${result.manifest.fileCount} packages=${result.manifest.packages.length} generatedAt=${result.manifest.generatedAt}`);
+        log(`[verify] 清单: sourceCommit=${result.manifest.sourceCommit} fileCount=${result.manifest.fileCount} packages=${result.manifest.packages.length} assets=${result.manifest.assets.length} generatedAt=${result.manifest.generatedAt}`);
       }
       if (result.ok) {
         log(`[verify] OK: ${result.fileCount} 个文件、${result.manifest.packages.length} 个包、${SECTIONS.length} 个分区 sha256 全部匹配`);

@@ -5,7 +5,7 @@
  * the tests do not touch `packages/`, `tests/` or `tools/` under version control.
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -71,6 +71,31 @@ export async function cleanup(directory) {
   } catch {
     /* best effort */
   }
+}
+
+/**
+ * Discover package directories under `base`: every directory holding a
+ * `package.json`, recursively. Returns posix paths relative to `base`, sorted.
+ * Used so tests assert against the source tree instead of a hard-coded count.
+ */
+export async function listPackageDirs(base, options = {}) {
+  const excluded = new Set(options.excludedDirNames ?? ['.agent', 'node_modules', 'tmp', '.git']);
+  const found = [];
+
+  async function visit(dir, rel) {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
+      const childRel = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (excluded.has(entry.name)) continue;
+        await visit(path.join(dir, entry.name), childRel);
+      } else if (entry.isFile() && entry.name === 'package.json' && rel) {
+        found.push(rel);
+      }
+    }
+  }
+
+  await visit(base, '');
+  return found.sort();
 }
 
 /** Run the real CLI (spawn) and return { status, stdout, stderr }. */

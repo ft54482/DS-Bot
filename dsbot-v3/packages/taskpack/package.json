@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/taskpack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L47 task pack contract: pure buildTaskPack/validatePack/choosePath for the dsh_session and superagent paths, with explicit routing reasons and non-silent degradation.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

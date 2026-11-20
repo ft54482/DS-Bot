@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/model-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L45 model gateway: one complete() contract over direct_http (env-only credentials) and dsh_bridge (loopback MCP bridge, no API key). Transport and clock are injected; no IO of its own.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

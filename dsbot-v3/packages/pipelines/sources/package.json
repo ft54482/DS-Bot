@@ -1,0 +1,20 @@
+{
+  "name": "@ds-bot/pipelines-sources",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-media topic-pack source client: hot list + summary hash, no full-text fetch, cross-check",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./src/client.js",
+    "./cross-check": "./src/cross-check.js",
+    "./errors": "./src/errors.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

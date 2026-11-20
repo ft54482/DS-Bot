@@ -3,14 +3,14 @@
 本目录由试验仓 `tools/migrate/bundle.mjs` 打包生成：
 
 - 源仓库：`ft54482/superagent-lab-smoke`
-- 源 commit：`adfd894f84fe84cfc8ffe4ff748ece93575fd05e`
+- 源 commit：`96fdc949ec3802b2cc7ca50165d8c6d701748385`
 - 目标：作为 DS Bot fork 的**新增顶层目录**整体落地；DS Bot 既有文件保持不变
 
 ## 目录
 
 | 路径 | 内容 |
 | --- | --- |
-| `packages/` | 28 个任务运行层包（源码 + 各自 test） |
+| `packages/` | 33 个任务运行层包（源码 + 各自 test） |
 | `tests/` | 跨包验收测试：conformance / contract / e2e / dod / regression |
 | `tools/` | 校验与运维脚本：verify / seed / perf / migrate |
 | `docs/prd/01-data-model.sql` | verify 所需的只读 schema 副本（自包含） |
@@ -30,19 +30,23 @@
 - `packages/authz/` — `@dsbot/authz`
 - `packages/autoloop/` — `@dsbot/autoloop`
 - `packages/bridge/` — `@ds-bot/bridge`
+- `packages/chief/` — `@dsbot/chief`
 - `packages/cli/` — `@dsbot-v3/cli`
 - `packages/context/` — `@dsbot/context`
 - `packages/cost/` — `@dsbot/cost`
 - `packages/demo/` — `@ds-bot/demo`
 - `packages/devloop-plugin/` — `@dsbot/devloop-plugin`
+- `packages/dsbot-adapter/` — `@dsbot/dsbot-adapter`
 - `packages/events/` — `@dsbot/events`
 - `packages/goal-engine/` — `@dsbot/goal-engine`
 - `packages/loop/` — `@dsbot/loop`
 - `packages/metrics/` — `@dsbot/metrics`
+- `packages/model-gateway/` — `@dsbot/model-gateway`
 - `packages/monitor/` — `@dsbot/monitor`
 - `packages/notify/` — `@dsbot/notify`
 - `packages/pipelines/content/` — `@ds-bot/pipelines-content`
 - `packages/pipelines/selfmedia/` — `@ds-bot/pipelines-selfmedia`
+- `packages/pipelines/sources/` — `@ds-bot/pipelines-sources`
 - `packages/profiles/` — `@dsbot/profiles`
 - `packages/provisioner/` — `@dsbot/provisioner`
 - `packages/recovery/` — `@dsbot/recovery`
@@ -50,6 +54,7 @@
 - `packages/scheduler/` — `@dsbot/scheduler`
 - `packages/service/` — `@dsbot-v3/service`
 - `packages/store/` — `@dsbot/store`
+- `packages/taskpack/` — `@dsbot/taskpack`
 - `packages/verifier-agent/` — `@dsbot/verifier-agent`
 
 ## 自包含与 cwd 无关

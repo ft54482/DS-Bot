@@ -1,0 +1,18 @@
+{
+  "name": "@ds-bot/pipelines-selfmedia",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end self-media pilot: content chain + acceptance profile -> ready-for-review publish package, never published",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./pilot": "./src/pilot.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

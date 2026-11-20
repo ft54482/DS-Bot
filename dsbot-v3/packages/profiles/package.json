@@ -1,0 +1,21 @@
+{
+  "name": "@dsbot/profiles",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L8 self-media acceptance profile: facts (two independent sources + snapshot), source freshness, quality rubric, layout and compliance. Publishing authorization is evaluated separately and is never granted by acceptance.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./profile": "./src/profile.js"
+  },
+  "bin": {
+    "dsbot-evaluate-article": "bin/evaluate.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

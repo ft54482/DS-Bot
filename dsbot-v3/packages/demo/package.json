@@ -1,0 +1,21 @@
+{
+  "name": "@ds-bot/demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L29 one-command end-to-end self-media demo over the runtime, agent tools and self-media pilot, with every external dependency stubbed",
+  "bin": {
+    "dsbot-demo": "./run.mjs"
+  },
+  "exports": {
+    ".": "./src/index.js",
+    "./run": "./src/demo.js"
+  },
+  "scripts": {
+    "demo": "node run.mjs",
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

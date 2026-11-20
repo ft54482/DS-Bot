@@ -1,0 +1,13 @@
+{
+  "name": "@dsbot-v3/conformance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L19 PRD hard-rule conformance checks over the merged runtime/API.",
+  "scripts": {
+    "test": "node --test ."
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

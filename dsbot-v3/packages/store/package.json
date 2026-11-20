@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/store",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "DS Bot V3 L1 task store: node:sqlite schema, DAO and guards",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "test": "node --test test"
+  }
+}

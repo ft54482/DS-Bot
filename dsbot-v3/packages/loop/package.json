@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/loop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L25 loop config: a dependency-free YAML loader, a validated loop schema and the rounds/budget/no-progress stop-loss policy.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

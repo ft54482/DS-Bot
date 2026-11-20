@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/metrics",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L16 north-star metrics: pure computeMetrics({tasks,runs,acceptances,costs}) for cost per accepted task, lead time, rework rounds and human interventions. No file or network access.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

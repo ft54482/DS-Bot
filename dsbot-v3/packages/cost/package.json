@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/cost",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L32 cost ledger and budget guard: per-run CNY accounting, min-chain caps and over-budget refusal. Pure in-memory; no IO and no dependencies.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

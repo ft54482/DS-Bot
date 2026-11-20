@@ -1,0 +1,20 @@
+{
+  "name": "@ds-bot/pipelines-content",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-media content chain: retrieve -> snapshot -> fact_check -> write -> review -> typeset (injectable I/O, no network)",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./pipeline": "./src/pipeline.js",
+    "./article-pack": "./src/article-pack.js",
+    "./tool-chain": "./src/tool-chain.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

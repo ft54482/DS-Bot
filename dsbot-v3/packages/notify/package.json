@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/notify",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L26 alerting: stuck/failed/over-budget notifications with a 5-minute dedupe window and a two-step escalation cap. Injected sender, console-only default.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

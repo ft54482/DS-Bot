@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/agents",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L21 Chief/business bot tool surface: thin authorized wrappers over the L9 runtime",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

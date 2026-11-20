@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/events",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L13b reliable-dispatch primitives: in-memory outbox state machine, inbox dedupe, watermark and idempotency keys. No file or network access.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

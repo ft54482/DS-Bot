@@ -3,7 +3,7 @@
 本目录由试验仓 `tools/migrate/bundle.mjs` 打包生成：
 
 - 源仓库：`ft54482/superagent-lab-smoke`
-- 源 commit：`cfc46172441675870dadd143634e891484fc0177`
+- 源 commit：`17d46ed9932700cf46b98577f644b7930552189e`
 - 目标：作为 DS Bot fork 的**新增顶层目录**整体落地；DS Bot 既有文件保持不变
 
 ## 目录

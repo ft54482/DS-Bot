@@ -11,6 +11,7 @@
  * unsupported number or an unauthorized publish state.
  */
 
+import { distinctPublisherLabels } from './attribution.mjs';
 import { hostOf } from './retrieval.mjs';
 
 export const REVIEW_VERSION = 1;
@@ -85,6 +86,24 @@ const FORBIDDEN_STYLE = [
 
 const ABSOLUTE_PROMISE_RE = /(保证收益|稳赚|零风险|百分百有效|绝对安全)/;
 
+/**
+ * Advice/opinion leads. These mark a sentence as a recommendation rather than a
+ * factual assertion. `要` and `可以` are ambiguous in Chinese ("要闻",
+ * "可以看到"), so they only count when followed by a recommendation verb.
+ */
+const ADVICE_LEAD_RE =
+  /^(?:建议|应该|应当|务必|请|别|不要|值得|不妨|最好|宜|推荐|切记|记住|尽量|要(?!求|点|闻|是|么)|需要(?:先|再|把|用|通过|从|在|按|考虑|尝试|参考|选择|优先|补充|核对|复核|确认|注意|保持|统一|拆|删|改)|可以(?:先|再|把|用|通过|从|在|按|考虑|尝试|参考|选择|优先|删|拆|统一|固定|保留))/;
+
+/** Explicit comparison/evaluation phrasing from the ticket. */
+const EVALUATIVE_RE =
+  /(而不是|优于|劣于|好于|不如|与其|比[^。！？；，]{0,16}(?:更|还)(?:好|差|重要|划算|值得|合适|稳妥)|更好|更差|更划算|更重要|更值得|没必要|不值得|胜于)/;
+
+/**
+ * Markdown ordered-list markers ("4. ", "4、", "(4) ") are structure, not
+ * facts. Bullet markers are already removed while buffering paragraphs.
+ */
+const LIST_MARKER_RE = /^(?:[-*+]\s+|\d{1,3}[.)、]\s*|\(\d{1,3}\)\s*|（\d{1,3}）\s*)/;
+
 function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -145,6 +164,24 @@ function stripCitations(text) {
   return String(text ?? '').replace(/\[\d+\]/g, '');
 }
 
+/** Remove a leading Markdown list marker ("4. ", "4、", "(4) ") from a sentence. */
+export function stripListMarker(text) {
+  return String(text ?? '').replace(LIST_MARKER_RE, '').trim();
+}
+
+/**
+ * A claim candidate must assert a fact. Imperative, advice and evaluative
+ * sentences are skipped by the deterministic fact check so that a
+ * recommendation such as "用回滚率验收，而不是争论 AI 会不会出错" is not
+ * reported as an unsupported factual claim.
+ */
+export function isOpinionOrAdviceSentence(text) {
+  const value = stripListMarker(stripCitations(text)).trim();
+  if (!value) return false;
+  if (ADVICE_LEAD_RE.test(value)) return true;
+  return EVALUATIVE_RE.test(value);
+}
+
 function normalizeForMatch(text) {
   return stripCitations(text).replace(/\s+/g, '').replace(/[“”「」"'‘’]/g, '');
 }
@@ -173,7 +210,7 @@ export function extractSentences(body) {
     if (!text) return;
     for (const sentence of text.split(/(?<=[。！？!?；;])\s*/)) {
       const trimmed = sentence.trim();
-      const withoutCitations = stripCitations(trimmed).trim();
+      const withoutCitations = stripListMarker(stripCitations(trimmed)).trim();
       if (withoutCitations.length < 6) continue;
       result.push({ text: withoutCitations, paragraph_index: paragraphIndex });
     }
@@ -190,11 +227,13 @@ export function extractSentences(body) {
       paragraphIndex += 1;
       continue;
     }
-    if (/^\[\d+\]\s+https?:\/\//.test(trimmed)) continue;
-    if (/^[-*+]\s+/.test(trimmed)) {
+    // Rendered source lines carry a title, publisher, snapshot hash and URL;
+    // they are citations, not prose, and must never be fact-checked as claims.
+    if (/^\[\d+\]\s+\S/.test(trimmed)) continue;
+    if (/^(?:[-*+]|\d{1,3}[.)、]|\(\d{1,3}\)|（\d{1,3}）)\s+/.test(trimmed)) {
       flush();
       paragraphIndex += 1;
-      buffer = [trimmed.replace(/^[-*+]\s+/, '')];
+      buffer = [stripListMarker(trimmed)];
       continue;
     }
     if (buffer.length === 0) paragraphIndex += 1;
@@ -226,9 +265,21 @@ function checkFactuality({ body, facts, sourceTexts }) {
   for (const text of sourceTexts.values()) corpusParts.push(String(text));
   const corpus = corpusParts.join('\n').replace(/,/g, '');
 
+  const sentences = extractSentences(body);
   const unsupported = [];
   const supportedSamples = [];
-  for (const sentence of extractSentences(body)) {
+  const skippedOpinionClaims = [];
+  for (const sentence of sentences) {
+    // Advice/opinion is not a factual assertion: skip it instead of demanding a
+    // source. Declarative sentences with numbers/attribution are still checked.
+    if (isOpinionOrAdviceSentence(sentence.text)) {
+      skippedOpinionClaims.push({
+        claim: sentence.text,
+        paragraph_index: sentence.paragraph_index,
+        reason: 'opinion_or_advice',
+      });
+      continue;
+    }
     const matchedFact = asArray(facts).find((fact) => factsMatch(sentence.text, fact.claim));
     const numbers = extractNumbers(sentence.text);
     const missing = numbers.filter((value) => !corpus.includes(value));
@@ -277,8 +328,11 @@ function checkFactuality({ body, facts, sourceTexts }) {
       threshold: 80,
       passed: score >= 80,
       evidence: {
-        checked_sentences: extractSentences(body).length,
+        checked_sentences: sentences.length - skippedOpinionClaims.length,
+        total_sentences: sentences.length,
         unsupported_claims: unsupported.slice(0, 8),
+        skipped_opinion_claims: skippedOpinionClaims.slice(0, 8),
+        skipped_opinion_count: skippedOpinionClaims.length,
         supported_samples: supportedSamples,
         source_texts_available: sourceTexts.size,
       },
@@ -288,23 +342,31 @@ function checkFactuality({ body, facts, sourceTexts }) {
   };
 }
 
-function checkSourcing({ facts, sources }) {
-  const keyFacts = asArray(facts).filter((fact) => fact?.key === true);
-  const detail = keyFacts.map((fact) => {
+function checkSourcing({ facts, sources, keyFacts = null }) {
+  const loadedSources = asArray(sources);
+  const selected = Array.isArray(keyFacts) && keyFacts.length > 0
+    ? asArray(keyFacts)
+    : asArray(facts).filter((fact) => fact?.key === true);
+  const detail = selected.map((fact) => {
     const refs = asArray(fact.source_refs).filter(isNonEmptyString);
     const hosts = [...new Set(refs.map(hostOf).filter(Boolean))];
+    // Independent sourcing is judged on the original publisher (falling back
+    // to the URL host), never on an aggregator that merely carried the item.
+    const publishers = distinctPublisherLabels(refs, loadedSources);
     return {
       claim: fact.claim,
       key: true,
       source_refs: refs,
       hosts,
-      independent_hosts: hosts.length,
-      passed: hosts.length >= 2,
+      publishers,
+      distinct_hosts: publishers,
+      independent_hosts: publishers.length,
+      passed: publishers.length >= 2,
     };
   });
   const weak = detail.filter((entry) => !entry.passed);
   const sourceIssues = [];
-  if (asArray(sources).length === 0) {
+  if (loadedSources.length === 0) {
     sourceIssues.push({
       code: 'no_sources',
       severity: 'critical',
@@ -313,30 +375,40 @@ function checkSourcing({ facts, sources }) {
     });
   }
   for (const entry of weak) {
+    if (entry.source_refs.length === 0) {
+      sourceIssues.push({
+        code: 'key_fact_without_source',
+        severity: 'critical',
+        message: `关键事实没有来源引用：${entry.claim}`,
+        evidence: entry,
+        rubric_item: 'sourcing',
+      });
+      continue;
+    }
     sourceIssues.push({
-      code: 'key_fact_not_independent',
-      severity: 'critical',
-      message: `关键事实只有 ${entry.independent_hosts} 个独立主机来源：${entry.claim}`,
+      code: 'single_host_sourcing',
+      severity: 'warning',
+      message: `关键事实只有 ${entry.independent_hosts} 个独立出版方来源：${entry.claim}`,
       evidence: entry,
       rubric_item: 'sourcing',
     });
   }
-  const missingSnapshot = asArray(sources).filter(
+  const missingSnapshot = loadedSources.filter(
     (source) =>
       !isNonEmptyString(source?.url) ||
       !/^[a-f0-9]{64}$/.test(String(source?.sha256 ?? '')) ||
-      typeof source?.excerpt !== 'string',
+      !isNonEmptyString(source?.excerpt),
   );
   if (missingSnapshot.length > 0) {
     sourceIssues.push({
-      code: 'source_snapshot_incomplete',
+      code: 'missing_source_snapshot',
       severity: 'warning',
-      message: `${missingSnapshot.length} 个来源缺少完整快照（url/sha256/excerpt）。`,
+      message: `${missingSnapshot.length} 个来源缺少快照（url/sha256/摘要），不能作为已核对来源。`,
       evidence: { missing: missingSnapshot.map((source) => source?.url ?? null).slice(0, 8) },
       rubric_item: 'sourcing',
     });
   }
-  if (keyFacts.length === 0 && asArray(sources).length > 0) {
+  if (detail.length === 0 && loadedSources.length > 0) {
     sourceIssues.push({
       code: 'no_key_facts',
       severity: 'warning',
@@ -346,10 +418,10 @@ function checkSourcing({ facts, sources }) {
   }
 
   let score = 100;
-  if (asArray(sources).length === 0) score = 0;
+  if (loadedSources.length === 0) score = 0;
   score -= Math.min(60, weak.length * 25);
   if (missingSnapshot.length > 0) score -= 20;
-  if (keyFacts.length === 0 && asArray(sources).length > 0) score -= 15;
+  if (detail.length === 0 && loadedSources.length > 0) score -= 15;
   score = clamp(score);
   return {
     item: {
@@ -357,10 +429,20 @@ function checkSourcing({ facts, sources }) {
       label: '来源与快照',
       score,
       threshold: 80,
-      passed: score >= 80 && weak.length === 0 && asArray(sources).length > 0,
+      passed:
+        score >= 80 &&
+        weak.length === 0 &&
+        loadedSources.length > 0 &&
+        missingSnapshot.length === 0,
       evidence: {
-        source_count: asArray(sources).length,
-        hosts: [...new Set(asArray(sources).map((source) => hostOf(source?.url)).filter(Boolean))],
+        source_count: loadedSources.length,
+        hosts: [...new Set(loadedSources.map((source) => hostOf(source?.url)).filter(Boolean))],
+        publishers: distinctPublisherLabels(
+          loadedSources.map((source) => source?.url),
+          loadedSources,
+        ),
+        snapshot_count: loadedSources.length - missingSnapshot.length,
+        key_fact_count: detail.length,
         key_facts: detail,
       },
       issues: sourceIssues,
@@ -376,7 +458,7 @@ function proseParagraphs(body) {
       (line) =>
         line.length > 0 &&
         !/^#{1,6}\s/.test(line) &&
-        !/^\[\d+\]\s+https?:\/\//.test(line),
+        !/^\[\d+\]\s+\S/.test(line),
     );
 }
 
@@ -664,9 +746,21 @@ function normalizeIssue(issue) {
   };
 }
 
+/** Normalize the per-item `{item, status, evidence}` checklist from the model. */
+function normalizeModelChecks(checks) {
+  return asArray(checks)
+    .filter(isPlainObject)
+    .map((check) => ({
+      item: isNonEmptyString(check.item) ? check.item.trim() : null,
+      status: ['pass', 'warn', 'fail'].includes(check.status) ? check.status : null,
+      evidence: reviewEvidenceList(check.evidence),
+    }))
+    .filter((check) => check.item !== null || check.status !== null || check.evidence.length > 0);
+}
+
 function applyModelReview(items, modelReview) {
   const extraIssues = [];
-  if (!modelReview) return { items, extraIssues, modelUsed: false };
+  if (!modelReview) return { items, extraIssues, modelUsed: false, modelChecks: [] };
 
   if (modelReview.__error) {
     extraIssues.push({
@@ -675,18 +769,22 @@ function applyModelReview(items, modelReview) {
       message: `独立审校模型调用失败：${modelReview.__error}`,
       rubric_item: null,
     });
-    return { items, extraIssues, modelUsed: true };
+    return { items, extraIssues, modelUsed: true, modelChecks: [] };
   }
   if (modelReview.__parse_error) {
+    const repairAttempts = Number.isFinite(modelReview.retry_count)
+      ? Math.max(0, Math.trunc(modelReview.retry_count))
+      : 1;
     extraIssues.push({
       code: 'review_invalid_json',
       severity: 'critical',
-      message: '独立审校模型没有返回可解析的 JSON（已自动重试 1 次），按未通过处理。',
+      message: `独立审校模型连续 ${repairAttempts + 1} 次没有返回可解析的 JSON（已自动修复 ${repairAttempts} 次），按未通过处理。`,
       rubric_item: null,
     });
-    return { items, extraIssues, modelUsed: true };
+    return { items, extraIssues, modelUsed: true, modelChecks: [] };
   }
 
+  const modelChecks = normalizeModelChecks(modelReview.checks);
   const modelRubric = isPlainObject(modelReview.rubric) ? modelReview.rubric : {};
   const missingItems = [];
   const missingEvidence = [];
@@ -758,7 +856,7 @@ function applyModelReview(items, modelReview) {
       rubric_item: null,
     });
   }
-  return { items, extraIssues, modelUsed: true };
+  return { items, extraIssues, modelUsed: true, modelChecks };
 }
 
 function dedupeIssues(issues) {
@@ -782,6 +880,7 @@ export function reviewArticle({
   article,
   facts = [],
   sources = [],
+  keyFacts = null,
   sourceTexts = null,
   license = { status: 'unauthorized', published: false },
   layout = {},
@@ -793,7 +892,7 @@ export function reviewArticle({
   const texts = textMapOf(sourceTexts);
   const items = [
     checkFactuality({ body: article?.body ?? '', facts, sourceTexts: texts }).item,
-    checkSourcing({ facts, sources }).item,
+    checkSourcing({ facts, sources, keyFacts }).item,
     checkStructure({ article, layout }).item,
     checkReadability({ article }).item,
     checkStyle({ article }).item,
@@ -834,19 +933,29 @@ export function reviewArticle({
   const score = round1(weighted);
 
   const factItem = finalItems.find((item) => item.id === 'factuality');
+  const sourcingItem = finalItems.find((item) => item.id === 'sourcing');
   const unsupportedClaims = factItem?.evidence?.unsupported_claims ?? [];
   const evidence = {
     source_count: asArray(sources).length,
     source_hosts: [...new Set(asArray(sources).map((source) => hostOf(source?.url)).filter(Boolean))],
+    source_publishers: sourcingItem?.evidence?.publishers ?? [],
     fact_count: asArray(facts).length,
-    key_fact_count: asArray(facts).filter((fact) => fact?.key === true).length,
+    key_fact_count: sourcingItem?.evidence?.key_fact_count ?? 0,
+    key_facts: sourcingItem?.evidence?.key_facts ?? [],
     checked_sentences: factItem?.evidence?.checked_sentences ?? 0,
     unsupported_claims: unsupportedClaims,
+    skipped_opinion_claims: factItem?.evidence?.skipped_opinion_claims ?? [],
     reviewer_model: reviewer?.model ?? null,
     independent_model_used: applied.modelUsed,
+    reviewer_checks: applied.modelChecks,
     reviewer_retry_count: Number.isFinite(modelReview?.retry_count)
       ? Math.max(0, Math.trunc(modelReview.retry_count))
       : 0,
+    reviewer_repair_attempts: Number.isFinite(modelReview?.repair_attempts)
+      ? Math.max(0, Math.trunc(modelReview.repair_attempts))
+      : Number.isFinite(modelReview?.retry_count)
+        ? Math.max(0, Math.trunc(modelReview.retry_count))
+        : 0,
     reviewer_parse_strategy: isNonEmptyString(modelReview?.parse_strategy)
       ? modelReview.parse_strategy
       : null,

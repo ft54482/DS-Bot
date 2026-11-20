@@ -7,6 +7,7 @@
  */
 
 import './cli.test.mjs';
+import './attribution.test.mjs';
 import './review.test.mjs';
 import './review-json.test.mjs';
 import './retrieval.test.mjs';

@@ -9,8 +9,13 @@
     ".": "./src/index.js",
     "./verify": "./src/verify.js",
     "./cases": "./src/cases.js",
-    "./paths": "./src/paths.js"
+    "./paths": "./src/paths.js",
+    "./src/*": "./src/*"
   },
+  "files": [
+    "src",
+    "README.md"
+  ],
   "scripts": {
     "test": "node --test test"
   },

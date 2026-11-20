@@ -12,19 +12,31 @@
  * never imports a filesystem module, never opens a socket, never reads
  * `~/.dsh` and never uses the ambient clock unless the caller leaves the
  * default in place.
+ *
+ * The four sibling packages are loaded by package name (see `./deps.js`), so
+ * the same source loads from this checkout and from an installed profile.
  */
 
-import {
+import { loadDependency } from './deps.js';
+import { DevloopError, devloopError, ERROR_CODES } from './errors.js';
+
+const [autoloop, goalEngine, provisioner, verifierAgent] = await Promise.all([
+  loadDependency('autoloop'),
+  loadDependency('goalEngine'),
+  loadDependency('provisioner'),
+  loadDependency('verifierAgent'),
+]);
+
+const {
   createGitGhMerger,
   createLoop,
   createMemoryStore,
   createSaScheduler,
   DEFAULT_MAX_TASK_COST_CNY,
-} from '../../autoloop/src/index.js';
-import { decompose } from '../../goal-engine/src/index.js';
-import { provision as provisionInstance } from '../../provisioner/src/index.js';
-import { verify as verifyPr } from '../../verifier-agent/src/index.js';
-import { DevloopError, devloopError, ERROR_CODES } from './errors.js';
+} = autoloop;
+const { decompose } = goalEngine;
+const { provision: provisionInstance } = provisioner;
+const { verify: verifyPr } = verifierAgent;
 
 /** Default executor concurrency when the tool caller omits `maxWorkers`. */
 export const DEFAULT_MAX_WORKERS = 4;

@@ -46,9 +46,50 @@ plugin_manager {
 可用 `list_bundles` 确认 `@dsbot/devloop-plugin` 已启用，随后模型侧应出现
 `loop_start` / `loop_status` / `loop_stop`。
 
-> 本包按仓库惯例用相对路径组合 `packages/*` 下的四个包，因此从仓库
-> checkout 里安装（`file:` 指向 `packages/devloop-plugin`）时请保留这些
-> 兄弟目录。
+> 从仓库 checkout 直接 `install_bundle`（`file:` 指向 `packages/devloop-plugin`，
+> 没有复制进 `node_modules`）时，插件回退到同级的 `packages/<name>/src`
+> 加载四个兄弟包，因此请保留这五个兄弟目录。真正装进 `node_modules` 的
+> profile 一律按下面的包名解析。
+
+### 作为 npm 包安装（部署到任意 profile）
+
+插件在 `src/manager.js` 里用包名加载四个兄弟包（`@dsbot/autoloop/src/index.js`
+等），四个包通过 `package.json` 的 `./src/*` 子路径导出暴露源码。所以
+**5 个包必须一起装进 profile**；只装 `@dsbot/devloop-plugin` 会在启动时报
+`ERR_MODULE_NOT_FOUND: @dsbot/autoloop`。
+
+先给 5 个包打 tgz：
+
+```sh
+cd packages
+for p in autoloop goal-engine provisioner verifier-agent devloop-plugin; do
+  (cd "$p" && npm pack)
+done
+```
+
+再一次性装进目标 profile（`dsh plugin` 把参数转给 profile 目录的 pnpm）：
+
+```sh
+dsh plugin --profile ds-bot add \
+  "file:./autoloop/dsbot-autoloop-0.1.0.tgz" \
+  "file:./goal-engine/dsbot-goal-engine-0.1.0.tgz" \
+  "file:./provisioner/dsbot-provisioner-0.1.0.tgz" \
+  "file:./verifier-agent/dsbot-verifier-agent-0.1.0.tgz" \
+  "file:./devloop-plugin/dsbot-devloop-plugin-0.1.0.tgz"
+```
+
+Windows 用绝对路径，例如：
+
+```text
+dsh plugin --profile ds-bot add "file:C:\path\to\dsbot-autoloop-0.1.0.tgz" "file:C:\path\to\dsbot-goal-engine-0.1.0.tgz" "file:C:\path\to\dsbot-provisioner-0.1.0.tgz" "file:C:\path\to\dsbot-verifier-agent-0.1.0.tgz" "file:C:\path\to\dsbot-devloop-plugin-0.1.0.tgz"
+```
+
+`@dsbot/devloop-plugin` 的 `dependencies` 与 `peerDependencies` 都把四个兄弟包
+声明为 `0.1.0`：这四个包不发布到 npm registry，部署时由 profile 用
+`file:` 包提供（一次装齐 5 个，pnpm 就不会去 registry 解析它们）。缺少某个
+包时，插件 import 阶段会直接报出缺的包名和安装提示，而不是一个裸的
+`ERR_MODULE_NOT_FOUND` 路径。安装完重启 profile，`list_bundles` 应能看到
+`@dsbot/devloop-plugin`。
 
 ### 宿主注入真实接缝
 
@@ -155,14 +196,19 @@ loop_stop { "loopId": "loop-mf3k2-1", "reason": "需求撤回" }
 
 `createDevloopManager(options)` 接受 `sa`、`git`、`gh`、`runner`、`fs`、
 `probe`，以及 `scheduler` / `merger` / `verifier` / `goalEngine` /
-`loopFactory` 覆盖。测试全部用内存 fake：`sa`、`git`、`gh`、runner、
-provisioner fs 均不触网、不写真实 `~/.dsh`。
+`loopFactory` 覆盖。除安装布局用例外，测试全部用内存 fake：`sa`、`git`、
+`gh`、runner、provisioner fs 均不触网、不写真实 `~/.dsh`。安装布局用例在系统
+临时目录复制一份 `node_modules/@dsbot/*`（5 个包的 `package.json` 与 `src`），
+用 `node` 子进程 `import('@dsbot/devloop-plugin')`，断言不再出现
+`ERR_MODULE_NOT_FOUND`。
 
 ```sh
 node --test packages/devloop-plugin/test
 ```
 
-当前 39 条用例，覆盖：三个工具定义与 schema、DSH schema 子集校验、
+当前 42 条用例，覆盖：三个工具定义与 schema、DSH schema 子集校验、
 真实 goal-engine 拆任务、重复 goal、超预算、未知 loopId、停止与幂等、
 PASS 闭环完成、FAIL 触发 stop-loss、sa/git/gh 适配器、verifier-agent
-runner 注入、provisioner fake fs、bundle 声明与纯度扫描。
+runner 注入、provisioner fake fs、bundle 声明、四个兄弟包的 `./src/*` 子路径
+导出与 `files` 声明、纯度扫描，以及安装布局（`node_modules/@dsbot`）下的
+import。

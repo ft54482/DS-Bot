@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/dsbot-adapter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L49 DS Bot command adapter: map /goal, /delegate, /deliver and /stop chat commands onto injected Chief and runtime tools, with auditable receipts.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

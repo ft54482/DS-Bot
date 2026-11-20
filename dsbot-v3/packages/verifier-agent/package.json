@@ -1,0 +1,20 @@
+{
+  "name": "@dsbot/verifier-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L36 independent PR verification: scope gate, isolated rerun, head stability and a structured PASS/FAIL verdict from an injected runner.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./verify": "./src/verify.js",
+    "./cases": "./src/cases.js",
+    "./paths": "./src/paths.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

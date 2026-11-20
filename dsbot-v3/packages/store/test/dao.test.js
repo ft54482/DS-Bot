@@ -126,6 +126,35 @@ test('appendTaskEvent and updateTaskState keep an append-only ledger', (t) => {
   assert.equal(events[1].actor, 'human:ft54482');
 });
 
+test('listTaskEvents keeps insertion order when timestamps tie', (t) => {
+  const store = withStore(t);
+  const goal = goalTask(store, { id: 'task-goal' });
+  const at = 1_700_000_000_000;
+
+  // Explicit ids sort in reverse insertion order, so ordering by id (the old
+  // tie-breaker) would deterministically return these events backwards.
+  const inserted = [
+    { id: 'evt-tie-c', type: 'task.comment' },
+    {
+      id: 'evt-tie-b',
+      type: 'task.state_changed',
+      from_state: 'planned',
+      to_state: 'queued',
+    },
+    { id: 'evt-tie-a', type: 'task.assigned' },
+  ].map((event) => store.appendTaskEvent({
+    task_id: goal.id,
+    actor: 'system:test',
+    created_at: at,
+    ...event,
+  }));
+
+  assert.deepEqual(
+    store.listTaskEvents(goal.id).map((event) => event.id),
+    inserted.map((event) => event.id),
+  );
+});
+
 test('run, acceptance, evidence, cost, outbox and inbox round-trip', (t) => {
   const store = withStore(t);
   const goal = goalTask(store, { id: 'task-goal' });

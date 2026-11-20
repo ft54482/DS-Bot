@@ -421,8 +421,11 @@ export class Store {
 
   listTaskEvents(taskId, { limit = 100 } = {}) {
     requireString(taskId, 'task_id');
+    // created_at is only millisecond precision, so events written in the same
+    // millisecond tie. rowid is the insertion order and makes the ledger
+    // deterministic; event ids are random UUIDs and must not decide order.
     return toRows(this.#db.prepare(`
-      SELECT * FROM task_event WHERE task_id = ? ORDER BY created_at ASC, id ASC LIMIT ?
+      SELECT * FROM task_event WHERE task_id = ? ORDER BY created_at ASC, rowid ASC LIMIT ?
     `).all(taskId, limit));
   }
 

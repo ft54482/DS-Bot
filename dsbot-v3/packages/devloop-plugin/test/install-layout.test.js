@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -9,6 +16,23 @@ import { fileURLToPath } from 'node:url';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGES_DIR = path.join(HERE, '..', '..');
 const PACKAGES = ['devloop-plugin', 'autoloop', 'goal-engine', 'provisioner', 'verifier-agent'];
+
+// `fs.cpSync` is deliberately not used here. On Node v25 a recursive cpSync
+// crashes natively (exit 3221226505 / 0xC0000409) when the source lives under
+// a non-ASCII path, such as the lab checkout at D:\AI全自动视频流\...; the
+// whole test process dies without any test output. Copy by hand instead so
+// the suite stays green in both ASCII and non-ASCII workspaces.
+
+/** Recursively copies a directory tree with readdirSync/mkdirSync/copyFileSync. */
+function copyTree(source, target) {
+  mkdirSync(target, { recursive: true });
+  for (const entry of readdirSync(source, { withFileTypes: true })) {
+    const from = path.join(source, entry.name);
+    const to = path.join(target, entry.name);
+    if (entry.isDirectory()) copyTree(from, to);
+    else copyFileSync(from, to);
+  }
+}
 
 /**
  * Runs inside the temporary install root: imports the plugin by package name,
@@ -41,10 +65,11 @@ test('imports from an installed node_modules/@dsbot layout', () => {
     for (const name of PACKAGES) {
       const installed = path.join(root, 'node_modules', '@dsbot', name);
       mkdirSync(installed, { recursive: true });
-      cpSync(path.join(PACKAGES_DIR, name, 'src'), path.join(installed, 'src'), {
-        recursive: true,
-      });
-      cpSync(path.join(PACKAGES_DIR, name, 'package.json'), path.join(installed, 'package.json'));
+      copyTree(path.join(PACKAGES_DIR, name, 'src'), path.join(installed, 'src'));
+      copyFileSync(
+        path.join(PACKAGES_DIR, name, 'package.json'),
+        path.join(installed, 'package.json'),
+      );
     }
     writeFileSync(path.join(root, 'probe.mjs'), PROBE);
 

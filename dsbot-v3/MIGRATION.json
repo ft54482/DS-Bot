@@ -6,9 +6,9 @@
     "entry": "tools/migrate/bundle.mjs"
   },
   "sourceRepo": "ft54482/superagent-lab-smoke",
-  "sourceCommit": "cfc46172441675870dadd143634e891484fc0177",
+  "sourceCommit": "17d46ed9932700cf46b98577f644b7930552189e",
   "sourceBranch": null,
-  "generatedAt": "2026-11-20T22:40:15.287Z",
+  "generatedAt": "2026-11-20T22:57:30.592Z",
   "generatedAtSource": "clock",
   "bundleRoot": "dsbot-v3",
   "excludedDirNames": [
@@ -18,12 +18,12 @@
     ".git"
   ],
   "fileCount": 560,
-  "totalBytes": 3061415,
+  "totalBytes": 3062264,
   "sections": {
     "packages": {
       "fileCount": 472,
-      "bytes": 2346218,
-      "sha256": "7362feda3d1d4caf71cd8aedc04ed7eecbc2ddd67482d4322502b8c538355120"
+      "bytes": 2347067,
+      "sha256": "69a427b6edbd16b0e70502704c5bed332ada8173f6ff02bcd6b23834fe625efe"
     },
     "tests": {
       "fileCount": 51,
@@ -125,8 +125,8 @@
       "dir": "packages/devloop-plugin",
       "name": "@dsbot/devloop-plugin",
       "fileCount": 17,
-      "bytes": 92987,
-      "sha256": "32e07f80e9740561a58785a34ede237f027d0ca466d796ab80f659448bc3909e"
+      "bytes": 93836,
+      "sha256": "620c796686a9fd3791e54402a85c48d9e15d8663116f5f904710d3ddf45a5dfc"
     },
     {
       "dir": "packages/dsbot-adapter",
@@ -316,7 +316,7 @@
     {
       "path": "README.md",
       "bytes": 3450,
-      "sha256": "53540d842fe388f71eb88c9e31ce9542cbbefa4272df4627972b90213197c186"
+      "sha256": "f5bb1aeb99dc8784774f2355511301e0ffa3e3806538db4247eec5bfb62a2d42"
     },
     {
       "path": "docs/prd/01-data-model.sql",
@@ -1255,8 +1255,8 @@
     },
     {
       "path": "packages/devloop-plugin/test/install-layout.test.js",
-      "bytes": 2482,
-      "sha256": "504f8aefd690830ffa619d78207f7612221170965d55f75d71df2e15331dce75"
+      "bytes": 3331,
+      "sha256": "07bb6ad4a7022d4bbe5fb7f954e6e0739838aee7f4dd346353a0c327512c0399"
     },
     {
       "path": "packages/devloop-plugin/test/lifecycle.test.js",

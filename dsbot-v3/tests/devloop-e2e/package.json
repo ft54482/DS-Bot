@@ -1,0 +1,13 @@
+{
+  "name": "@dsbot/devloop-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L41 end-to-end dev-loop scenarios with fake GitHub, SuperAgent and verifier",
+  "scripts": {
+    "test": "node --test ."
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

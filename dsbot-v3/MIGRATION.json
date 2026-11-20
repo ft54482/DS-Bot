@@ -6,9 +6,9 @@
     "entry": "tools/migrate/bundle.mjs"
   },
   "sourceRepo": "ft54482/superagent-lab-smoke",
-  "sourceCommit": "3405b3e3fb37ec868eef6145a6d72301b365484b",
+  "sourceCommit": "adfd894f84fe84cfc8ffe4ff748ece93575fd05e",
   "sourceBranch": null,
-  "generatedAt": "2026-11-20T18:25:54.282Z",
+  "generatedAt": "2026-11-20T18:40:42.896Z",
   "generatedAtSource": "clock",
   "bundleRoot": "dsbot-v3",
   "excludedDirNames": [
@@ -17,23 +17,23 @@
     "tmp",
     ".git"
   ],
-  "fileCount": 433,
-  "totalBytes": 2194247,
+  "fileCount": 461,
+  "totalBytes": 2331786,
   "sections": {
     "packages": {
-      "fileCount": 388,
-      "bytes": 1876561,
-      "sha256": "93513bb528298c7fa56adc0bf7e2aa7c931d37815a6c7829f2c09ca83da3b578"
+      "fileCount": 403,
+      "bytes": 1959960,
+      "sha256": "22d4ed8f43cf575a62a4e3a36ee13d11a8c3174b2d185af591a1d7701ba6617a"
     },
     "tests": {
-      "fileCount": 29,
-      "bytes": 161118,
-      "sha256": "8082cc502aceaf9ec477721868ee267a390d2d0962fe857513122c7319c3b3e9"
+      "fileCount": 42,
+      "bytes": 210049,
+      "sha256": "1438a70b45e24f0bac03bdd1f60ad347db28bbada93fadd7708195bfcd1fb229"
     },
     "tools": {
       "fileCount": 14,
-      "bytes": 124150,
-      "sha256": "837d907725018d7c6a1ef322cc56ace3e6c1ff00ef603a54045dd5244dae727b"
+      "bytes": 129302,
+      "sha256": "0b86d8bdee51016142e3cbf444ca46e58f4c1f45b81fae795cf6224e40d17272"
     }
   },
   "packages": [
@@ -113,6 +113,13 @@
       "fileCount": 13,
       "bytes": 48948,
       "sha256": "9d76a5d77cd000639c7f519017ec7b38ba4a3313cb8afbd72ea9e9ae4c9a8622"
+    },
+    {
+      "dir": "packages/devloop-plugin",
+      "name": "@dsbot/devloop-plugin",
+      "fileCount": 15,
+      "bytes": 83399,
+      "sha256": "aeca0a9a2663c020bef6322d8be0194d1867a352a312b13bb9714aabdf1dc145"
     },
     {
       "dir": "packages/events",
@@ -242,6 +249,7 @@
     "@dsbot/autoloop",
     "@dsbot/context",
     "@dsbot/cost",
+    "@dsbot/devloop-plugin",
     "@dsbot/events",
     "@dsbot/goal-engine",
     "@dsbot/loop",
@@ -267,8 +275,8 @@
   "files": [
     {
       "path": "README.md",
-      "bytes": 3135,
-      "sha256": "d8f9065ccd2942cab2959b47ba3ce5207e42b5e84a7e75a7ae60325cfef4f28a"
+      "bytes": 3192,
+      "sha256": "18ea127ade4014b7abfeb9fa1c1310c0cebae2284cc23e1a89fc67b6731fe125"
     },
     {
       "path": "docs/prd/01-data-model.sql",
@@ -1099,6 +1107,81 @@
       "path": "packages/demo/test/support.js",
       "bytes": 828,
       "sha256": "c97ddf1f54aff51581a235d81a55d103f1d9c0c36ba0793cef7d7b90f3e6d835"
+    },
+    {
+      "path": "packages/devloop-plugin/README.md",
+      "bytes": 5986,
+      "sha256": "93a67bfbc16d7c5c0aae94868f693e3a8cefd9df506bf5e68f4e19fbc9a3f320"
+    },
+    {
+      "path": "packages/devloop-plugin/cordis.patch.yml",
+      "bytes": 404,
+      "sha256": "f6115c4f070557d7b8f39c06f0663d8685d239158bf3c37e8e4f567a42ad3b1b"
+    },
+    {
+      "path": "packages/devloop-plugin/package.json",
+      "bytes": 710,
+      "sha256": "79f9436baaee559c6917a81e21adbda48f77e3768bc3406d993ed772b8a8cfa8"
+    },
+    {
+      "path": "packages/devloop-plugin/src/errors.js",
+      "bytes": 1486,
+      "sha256": "748a1965392af9b64e220e5b5c4375942585fc20f20607839c664f2e8e024310"
+    },
+    {
+      "path": "packages/devloop-plugin/src/index.js",
+      "bytes": 2987,
+      "sha256": "ba223c69529763393d540fef2cda003a91a78e79a13d3372b3eb5aac7c616917"
+    },
+    {
+      "path": "packages/devloop-plugin/src/manager.js",
+      "bytes": 27169,
+      "sha256": "ce789e5af5f3e782ef173690da79dd78fef5a974a781a3388d2217f23bf3e9c6"
+    },
+    {
+      "path": "packages/devloop-plugin/src/tools.js",
+      "bytes": 7924,
+      "sha256": "cd308e9c5c707b33d939c25c8db2f0379837383c8f7e4b03a3c66668133ff5de"
+    },
+    {
+      "path": "packages/devloop-plugin/test/bundle.test.js",
+      "bytes": 1122,
+      "sha256": "e631da1a9933012bca9304dd5dc63f0a601ffc7e93ea963225ef07a1d9b4b232"
+    },
+    {
+      "path": "packages/devloop-plugin/test/composition.test.js",
+      "bytes": 6101,
+      "sha256": "faa67703816522d2e973ff34c1cf6a19536bd3162352182f8fc4792fb1537644"
+    },
+    {
+      "path": "packages/devloop-plugin/test/index.js",
+      "bytes": 485,
+      "sha256": "e401d8d84b441b4e1c5eb487975665e7db35ec9be2622b38b5e6cbcdb8d2df28"
+    },
+    {
+      "path": "packages/devloop-plugin/test/lifecycle.test.js",
+      "bytes": 7362,
+      "sha256": "e1ce9d4e533b4c97bfd4244e59f4d982870bc813f25272b66c3547b36bb4ecd9"
+    },
+    {
+      "path": "packages/devloop-plugin/test/plugin.test.js",
+      "bytes": 4408,
+      "sha256": "ef6fb5a0387dbe2b572ddfaa8b26f597cbe78a08bafe1dc4ec7a548a7e586ba7"
+    },
+    {
+      "path": "packages/devloop-plugin/test/purity.test.js",
+      "bytes": 1664,
+      "sha256": "ad99762cef871d7a9f11a68bda30ec0bc65ccfa65c22caf4f50742b3e00badda"
+    },
+    {
+      "path": "packages/devloop-plugin/test/support/harness.js",
+      "bytes": 8888,
+      "sha256": "a3b760afb86263d8047034e5f165231d69ae516ac0df05cfe6ae4475171f074b"
+    },
+    {
+      "path": "packages/devloop-plugin/test/tools.test.js",
+      "bytes": 6703,
+      "sha256": "9a3e9d9af5c5b2d94c71e0d030df76b95f07c312264649a719bdfddbe6282904"
     },
     {
       "path": "packages/events/README.md",
@@ -2296,6 +2379,71 @@
       "sha256": "f490e21e3d6861222b620245627f3207376e652f2c0c09ef6ff646defdc0f889"
     },
     {
+      "path": "tests/devloop-e2e/README.md",
+      "bytes": 3555,
+      "sha256": "4101aa48fb38253c52dea2f0fc9cf9992bdc048c9f4513caa8ab4ad7975a3816"
+    },
+    {
+      "path": "tests/devloop-e2e/index.js",
+      "bytes": 362,
+      "sha256": "b10e53ead33829e30c627a3f2498deb53f7d0ded21e075481b794f437797cd35"
+    },
+    {
+      "path": "tests/devloop-e2e/observability.test.js",
+      "bytes": 4150,
+      "sha256": "7c975aa6caad4999b3e7b178ee6b2076539d286d13377983e7fbb86dadd2b16f"
+    },
+    {
+      "path": "tests/devloop-e2e/package.json",
+      "bytes": 297,
+      "sha256": "ccc6d46a8dc7120c82c7dc709f95491858b2f9ce8de3011b800971b2abf267c5"
+    },
+    {
+      "path": "tests/devloop-e2e/scenario-a.test.js",
+      "bytes": 5135,
+      "sha256": "f1adc61b55bbb71ce3a019a9db19e4aa2baf5fa55bc8416ada3b002e6236e965"
+    },
+    {
+      "path": "tests/devloop-e2e/scenario-b.test.js",
+      "bytes": 4085,
+      "sha256": "3b7a09ba834f790575d8d1776bd34586724f51dbb2129b341a48b6fcf5e65a80"
+    },
+    {
+      "path": "tests/devloop-e2e/scenario-c.test.js",
+      "bytes": 4275,
+      "sha256": "b39182953f49b0ddb8d05aa40733a1937229cc6eb552f735672f19e611372d1a"
+    },
+    {
+      "path": "tests/devloop-e2e/scenario-d.test.js",
+      "bytes": 3858,
+      "sha256": "3794fff340fb3935c271a60e088c15ee4dcbf5df8d26d2b9f6e9cd76a9912604"
+    },
+    {
+      "path": "tests/devloop-e2e/scenario-e.test.js",
+      "bytes": 4981,
+      "sha256": "563538cc33992365b071779a834d9c2a2db72519214b128fd9c92778bd331e89"
+    },
+    {
+      "path": "tests/devloop-e2e/support/fake-store.js",
+      "bytes": 2732,
+      "sha256": "cf9c28ebe99a6b28b67ed7f16a88c134f6909f4a3f452fc3f4deb2636b8a3bec"
+    },
+    {
+      "path": "tests/devloop-e2e/support/fakes.js",
+      "bytes": 8615,
+      "sha256": "4dce5c3950a1ea9e3f79c1382160fab48986f96513538d5e1d7fde26e42fceff"
+    },
+    {
+      "path": "tests/devloop-e2e/support/goal.js",
+      "bytes": 1640,
+      "sha256": "260e48c001be44fffbe9a48b93c4c0052055e9ce20a4145be85d775fde8fb265"
+    },
+    {
+      "path": "tests/devloop-e2e/support/world.js",
+      "bytes": 5246,
+      "sha256": "758e5f4d352edc90400b8abf0f94603dd2591cb1d3715c61625e8683cf4fc15d"
+    },
+    {
       "path": "tests/dod/README.md",
       "bytes": 4208,
       "sha256": "888478a21b4dfcaa8a4723baff65e515b0b74b9ad8a647b20c00d73d1a1b6e09"
@@ -2362,18 +2510,18 @@
     },
     {
       "path": "tools/migrate/README.md",
-      "bytes": 4070,
-      "sha256": "a3cf64b9598e85705c8bff549cdde268c850d68d0dbf401b0a02d7dbd38378e9"
+      "bytes": 5453,
+      "sha256": "145e61c66c02f2ab0f0d79bd4fa028233df0374393585e5fb1386b476b82a83b"
     },
     {
       "path": "tools/migrate/bundle.mjs",
-      "bytes": 36758,
-      "sha256": "21de94868335f51758924569febdfc66245f7ac5ae53fa281db716f1d7e8c92e"
+      "bytes": 37162,
+      "sha256": "6354c7ba81b5c42ac24eda5b069cbeb200cba6a19522630853890a9117a7f592"
     },
     {
       "path": "tools/migrate/test/bundle.test.mjs",
-      "bytes": 13130,
-      "sha256": "73cc1ec8c491a6dc75f0b31cdae7c09a288db7669c95f62265f15100b781113d"
+      "bytes": 15468,
+      "sha256": "c606918bf099e96ff1815e949482e281d7bd99e4c39a1f9474863b8caf32005c"
     },
     {
       "path": "tools/migrate/test/package.json",
@@ -2392,8 +2540,8 @@
     },
     {
       "path": "tools/migrate/test/support/fixtures.mjs",
-      "bytes": 4784,
-      "sha256": "4904116a2687ab140b6dcb85cd4eb3ae11bc2c8c38b477bf58a2b0bb07895638"
+      "bytes": 5811,
+      "sha256": "816740790a8dc2590e5034f9f8718e59b41881e55c6a38bcac1c7e15b01a1610"
     },
     {
       "path": "tools/migrate/test/verify.test.mjs",

@@ -3,14 +3,14 @@
 本目录由试验仓 `tools/migrate/bundle.mjs` 打包生成：
 
 - 源仓库：`ft54482/superagent-lab-smoke`
-- 源 commit：`3405b3e3fb37ec868eef6145a6d72301b365484b`
+- 源 commit：`adfd894f84fe84cfc8ffe4ff748ece93575fd05e`
 - 目标：作为 DS Bot fork 的**新增顶层目录**整体落地；DS Bot 既有文件保持不变
 
 ## 目录
 
 | 路径 | 内容 |
 | --- | --- |
-| `packages/` | 27 个任务运行层包（源码 + 各自 test） |
+| `packages/` | 28 个任务运行层包（源码 + 各自 test） |
 | `tests/` | 跨包验收测试：conformance / contract / e2e / dod / regression |
 | `tools/` | 校验与运维脚本：verify / seed / perf / migrate |
 | `docs/prd/01-data-model.sql` | verify 所需的只读 schema 副本（自包含） |
@@ -34,6 +34,7 @@
 - `packages/context/` — `@dsbot/context`
 - `packages/cost/` — `@dsbot/cost`
 - `packages/demo/` — `@ds-bot/demo`
+- `packages/devloop-plugin/` — `@dsbot/devloop-plugin`
 - `packages/events/` — `@dsbot/events`
 - `packages/goal-engine/` — `@dsbot/goal-engine`
 - `packages/loop/` — `@dsbot/loop`

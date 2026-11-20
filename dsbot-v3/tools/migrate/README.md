@@ -26,10 +26,24 @@ node tools/migrate/bundle.mjs --verify $env:TEMP\mig1
 | `--out <dir>` | 输出目录，迁移包写到 `<dir>/dsbot-v3`（已存在会先清空，保证重跑幂等） |
 | `--verify <dir>` | 校验文件数、逐文件 sha256、逐包 sha256、分区 sha256、未登记/缺失文件 |
 | `--root <dir>` | 源仓库根目录（默认：本脚本所在仓库；测试夹具用它指向临时源） |
-| `--source-commit <sha>` | 覆盖清单记录的源 commit（默认取 git HEAD，取不到时回退读 `.git`） |
+| `--source-commit <sha>` | 覆盖清单记录的源 commit（默认用 `git rev-parse` 取源树所在仓库的 HEAD，含上层仓库；取不到时记录 `unknown`） |
 | `--source-repo <owner/name>` | 覆盖清单记录的源仓库（默认 `ft54482/superagent-lab-smoke`） |
 | `--generated-at <iso>` | 覆盖生成时间；也可设 `SOURCE_DATE_EPOCH` 做可复现打包 |
 | `--help` | 打印用法 |
+
+## sourceCommit 语义
+
+`MIGRATION.json.sourceCommit` 记录的是**源树所在 git 仓库**的 HEAD，不是迁移树自己的提交：
+
+- 打包时以 `--root`（默认本仓库根）为工作目录执行 `git rev-parse HEAD`。git 会自动向上发现仓库，
+  所以源树位于某个仓库的子目录时（例如迁移树落在 DS-Bot fork 的 `dsbot-v3/`），记录的是**该上层仓库**
+  的 40 位小写 sha；判断依据是 `git rev-parse` 能否解析，而不是源目录下有没有 `.git`。
+- 源目录完全不在任何 git 仓库中（`git rev-parse` 失败，且源目录自身也没有可读的 `.git`）时，
+  记录字面量 `unknown`；工具不会猜测 commit，也不会因此让打包失败。
+- `--source-commit <sha>` 始终优先于自动探测。把迁移树放进 fork 后若要重新打包，自动探测到的是
+  fork 的 HEAD；需要锁定实验仓来源时，应显式传入打包时的实验仓 commit。
+- `--verify` 要求 `sourceCommit` 是非空字符串；值为 `unknown` 时给出警告，其余值（包括 40 位 sha）
+  原样接受——迁移包可能被搬到别处，verify 不复核它是否仍是某个仓库的 HEAD。
 
 ## MIGRATION.json
 
@@ -74,7 +88,8 @@ node --test tools/migrate/test          # 22 个用例
 
 覆盖：目标布局、排除规则、MIGRATION.json 字段与磁盘一致性、幂等重跑、`SOURCE_DATE_EPOCH`
 可复现、`--out` 在源目录内不自复制、拒绝覆盖源目录、真实仓库冒烟（动态发现包并校验
-schema 副本）、校验通过、内容篡改/删除/多出文件/清单被改后失败、包名与清单不一致时
+schema 副本）、sourceCommit 两种布局（上层 git 仓库的子目录 → 40 位 sha；完全无 git 的临时目录
+→ `unknown`）、校验通过、内容篡改/删除/多出文件/清单被改后失败、包名与清单不一致时
 失败、schema 资产篡改后失败、迁移树在任意 cwd 下 verify 通过、schema 缺失时的明确报错、
 CLI 退出码（0/1/2）。
 

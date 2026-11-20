@@ -18,12 +18,39 @@ import {
   SCHEMA_VERSION,
   VERIFY_SCHEMA_ASSET,
   bundle,
+  detectGit,
   digestFiles,
 } from '../bundle.mjs';
-import { REPO_ROOT, cleanup, listPackageDirs, makeFixtureSource, makeTempDir, writeFiles } from './support/fixtures.mjs';
+import {
+  REPO_ROOT,
+  cleanup,
+  initGitRepoWithCommit,
+  listPackageDirs,
+  makeFixtureSource,
+  makeTempDir,
+  writeFiles,
+} from './support/fixtures.mjs';
+
+const FIXED_TIME = '2026-01-02T03:04:05.000Z';
 
 async function readManifest(bundleDir) {
   return JSON.parse(await readFile(path.join(bundleDir, MANIFEST_FILE_NAME), 'utf8'));
+}
+
+/**
+ * Build with git repository discovery disabled, so a temp tree counts as
+ * "not in any git repository" even if the OS temp directory happens to be
+ * nested in one. The variable is restored immediately after the build.
+ */
+async function bundleWithoutEnclosingGit(options, ceilingDir) {
+  const previous = process.env.GIT_CEILING_DIRECTORIES;
+  process.env.GIT_CEILING_DIRECTORIES = ceilingDir;
+  try {
+    return await bundle(options);
+  } finally {
+    if (previous === undefined) delete process.env.GIT_CEILING_DIRECTORIES;
+    else process.env.GIT_CEILING_DIRECTORIES = previous;
+  }
 }
 
 test('生成目标布局：packages/tests/tools + README.md + MIGRATION.json', async (t) => {
@@ -221,10 +248,11 @@ test('--out 指向源目录本身时拒绝执行（防覆盖）', async (t) => {
 });
 
 test('真实仓库冒烟：动态发现包、schema 资产与三个分区，verify 通过', async (t) => {
-  const out = await makeTempDir('dsh-migrate-repo-');
-  t.after(() => cleanup(out));
+  const workspace = await makeTempDir('dsh-migrate-repo-');
+  t.after(() => cleanup(workspace));
+  const out = path.join(workspace, 'out-repo');
 
-  const result = await bundle({ root: REPO_ROOT, out, generatedAt: '2026-01-02T03:04:05.000Z' });
+  const result = await bundle({ root: REPO_ROOT, out, generatedAt: FIXED_TIME });
   const bundleDir = result.bundleDir;
 
   assert.ok(result.manifest.fileCount > 300, `真实仓库应有 300+ 文件，实际 ${result.manifest.fileCount}`);
@@ -256,11 +284,42 @@ test('真实仓库冒烟：动态发现包、schema 资产与三个分区，veri
 
   assert.ok(result.manifest.sections.tests.fileCount > 10);
   assert.ok(result.manifest.sections.tools.fileCount > 8);
-  if (existsSync(path.join(REPO_ROOT, '.git'))) {
-    assert.match(result.manifest.sourceCommit, /^[0-9a-f]{40}$/, '从 git 检出打包时应记录 40 位 commit');
+
+  // sourceCommit semantics: the source tree may be a repository root or a
+  // subdirectory of an enclosing repository (the fork layout). Whenever
+  // `git rev-parse HEAD` resolves, the manifest records that 40-char sha;
+  // whether `.git` sits directly under the source root is irrelevant.
+  const enclosing = detectGit(REPO_ROOT);
+  if (enclosing.commit) {
+    assert.match(result.manifest.sourceCommit, /^[0-9a-f]{40}$/, '源树能解析出 git HEAD 时应记录 40 位 commit');
   } else {
-    assert.equal(result.manifest.sourceCommit, 'unknown', '迁移树没有 .git，应记录 unknown 而不是猜测');
+    assert.equal(result.manifest.sourceCommit, 'unknown', '源树完全不在 git 仓库里时应记录 unknown，而不是猜测');
   }
+
+  // Branch 1 (fork layout): the migration tree is a subdirectory of a repository.
+  const forkRepo = path.join(workspace, 'fork');
+  const forkHead = await initGitRepoWithCommit(forkRepo);
+  assert.ok(forkHead, '无法创建测试用 git 仓库：本机需要可用的 git');
+  const forkSource = path.join(forkRepo, BUNDLE_DIR_NAME);
+  await makeFixtureSource(forkSource);
+  const forkBuild = await bundle({
+    root: forkSource,
+    out: path.join(workspace, 'out-fork'),
+    generatedAt: FIXED_TIME,
+  });
+  assert.match(forkBuild.manifest.sourceCommit, /^[0-9a-f]{40}$/);
+  assert.equal(forkBuild.manifest.sourceCommit, forkHead, '仓库内子目录应记录上层仓库的 HEAD');
+
+  // Branch 2 (no git at all): the temp tree is outside every repository → unknown.
+  const noGitSource = path.join(workspace, 'no-git');
+  await makeFixtureSource(noGitSource);
+  const noGitBuild = await bundleWithoutEnclosingGit(
+    { root: noGitSource, out: path.join(workspace, 'out-no-git'), generatedAt: FIXED_TIME },
+    workspace,
+  );
+  assert.equal(noGitBuild.manifest.sourceCommit, 'unknown', '完全不在 git 仓库里时应记录 unknown');
+  assert.equal(noGitBuild.manifest.sourceBranch, null);
+
   assert.deepEqual(result.manifest.unpackagedFiles, []);
   for (const section of SECTIONS) {
     assert.ok(result.manifest.sections[section].fileCount > 0);

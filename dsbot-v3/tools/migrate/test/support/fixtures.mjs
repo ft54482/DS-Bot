@@ -63,6 +63,35 @@ export async function makeFixtureSource(root) {
   });
 }
 
+/**
+ * Create a git repository at `root` with one empty commit and return its 40-char
+ * HEAD sha, or null when git is unavailable/unusable.
+ *
+ * Used to reproduce the fork layout: a source tree that is *not* a repository
+ * root but sits inside an enclosing repository.
+ */
+export async function initGitRepoWithCommit(root) {
+  await mkdir(root, { recursive: true });
+  const runGit = (args) => spawnSync('git', args, {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 30_000,
+    windowsHide: true,
+  });
+  const identity = [
+    '-c', 'user.name=dsbot-v3 migrate fixture',
+    '-c', 'user.email=fixture@example.invalid',
+    '-c', 'commit.gpgsign=false',
+  ];
+
+  if (runGit(['init', '-q']).status !== 0) return null;
+  if (runGit([...identity, 'commit', '-q', '--allow-empty', '-m', 'fixture']).status !== 0) return null;
+  const head = runGit(['rev-parse', 'HEAD']);
+  if (head.status !== 0) return null;
+  const sha = head.stdout.trim();
+  return /^[0-9a-f]{40}$/.test(sha) ? sha : null;
+}
+
 /** Remove a temp tree, ignoring failures (used from `t.after`). */
 export async function cleanup(directory) {
   if (!directory) return;

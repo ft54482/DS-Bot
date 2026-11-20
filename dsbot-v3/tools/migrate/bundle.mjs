@@ -155,7 +155,15 @@ function readGitHeadFromFiles(root) {
   return null;
 }
 
-/** Return { commit, branch } for `root`, using git when available. */
+/**
+ * Return { commit, branch } for `root`, using git when available.
+ *
+ * `root` need not be the repository top level: `git rev-parse` walks up and
+ * resolves an enclosing repository, which is exactly what we want when the
+ * migration tree lands in a subdirectory such as `<fork>/dsbot-v3`.
+ * Only when no enclosing repository can be resolved do we fall back to reading
+ * `root/.git` directly, and only when that fails is the source "not in git".
+ */
 export function detectGit(root) {
   const commit = gitOutput(root, ['rev-parse', 'HEAD']) ?? readGitHeadFromFiles(root);
   const branch = gitOutput(root, ['rev-parse', '--abbrev-ref', 'HEAD']);
@@ -703,7 +711,7 @@ export async function verify(options = {}) {
     errors.push(`缺少 verify 所需的 schema 资产: ${VERIFY_SCHEMA_ASSET}（迁移树必须自包含）`);
   }
   if (manifest.sourceCommit === 'unknown') {
-    warnings.push('清单中的 sourceCommit 为 unknown（打包时源目录不是 git 检出）');
+    warnings.push('清单中的 sourceCommit 为 unknown（打包时源目录不在任何 git 仓库中）');
   }
   if (manifest.packages.length === 0) {
     warnings.push('清单中没有任何包');

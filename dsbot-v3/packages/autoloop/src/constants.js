@@ -1,16 +1,14 @@
 /**
  * L34 dev-loop policy constants.
  *
- * The rework and budget ceilings deliberately reuse the L25 loop defaults
+ * The rework and budget ceilings deliberately match the L25 loop defaults
  * (`packages/loop/src/constants.js`) so the driver and the loop config cannot
- * disagree about "2 rounds" or "30 CNY". The no-progress ceiling is new: the
- * driver counts completed rounds, not wall-clock idle time.
+ * disagree about "2 rounds" or "30 CNY". They are restated here instead of
+ * imported across package boundaries: the driver ships as its own npm package
+ * and must load from `node_modules/@dsbot/autoloop` without the L25 source
+ * tree next to it. `test/policy.test.js` pins the values back to the L25
+ * defaults in a checkout, so a change there fails the driver suite.
  */
-
-import {
-  DEFAULT_MAX_BUDGET,
-  DEFAULT_MAX_ROUNDS,
-} from '../../loop/src/constants.js';
 
 /** Driver states. `stop` and `done` are terminal. */
 export const LOOP_STATES = Object.freeze({
@@ -54,11 +52,11 @@ export const TERMINAL_TASK_STATES = Object.freeze([
   TASK_STATES.STOPPED,
 ]);
 
-/** At most 2 rework rounds per lane (issue #75). */
-export const DEFAULT_MAX_REWORK_ROUNDS = DEFAULT_MAX_ROUNDS;
+/** At most 2 rework rounds per lane (issue #75); equals L25 `DEFAULT_MAX_ROUNDS`. */
+export const DEFAULT_MAX_REWORK_ROUNDS = 2;
 
-/** At most 30 CNY per task (issue #75). */
-export const DEFAULT_MAX_TASK_COST_CNY = DEFAULT_MAX_BUDGET;
+/** At most 30 CNY per task (issue #75); equals L25 `DEFAULT_MAX_BUDGET`. */
+export const DEFAULT_MAX_TASK_COST_CNY = 30;
 
 /** Two consecutive rounds without a merge stop the loop (issue #75). */
 export const DEFAULT_MAX_NO_PROGRESS_ROUNDS = 2;

@@ -15,6 +15,18 @@
     "cordis.patch.yml",
     "README.md"
   ],
+  "dependencies": {
+    "@dsbot/autoloop": "0.1.0",
+    "@dsbot/goal-engine": "0.1.0",
+    "@dsbot/provisioner": "0.1.0",
+    "@dsbot/verifier-agent": "0.1.0"
+  },
+  "peerDependencies": {
+    "@dsbot/autoloop": "0.1.0",
+    "@dsbot/goal-engine": "0.1.0",
+    "@dsbot/provisioner": "0.1.0",
+    "@dsbot/verifier-agent": "0.1.0"
+  },
   "dsh": {
     "manifestVersion": 1,
     "bundle": {

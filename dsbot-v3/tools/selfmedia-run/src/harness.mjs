@@ -30,7 +30,10 @@ import {
   createHttpRetrieval,
   createSnapshotRetrieval,
   hostOf,
+  publisherOf,
+  viaOf,
 } from './retrieval.mjs';
+import { enrichArticleBody, selectKeyFacts } from './attribution.mjs';
 import {
   buildTags,
   countWords,
@@ -106,16 +109,47 @@ function titleMapOf(retrieval) {
   return map;
 }
 
-function titledSources(sources, titleMap, retrieval) {
-  const live = retrieval?.titles instanceof Map ? retrieval.titles : new Map();
-  return asArray(sources).map((source) => ({
-    ...source,
-    title:
-      (isNonEmptyString(source.title) ? source.title : null) ??
-      live.get(source.url) ??
-      titleMap.get(source.url) ??
-      hostOf(source.url),
-  }));
+function sourceMetaOf(retrieval) {
+  const map = new Map();
+  for (const source of asArray(retrieval?.sources)) {
+    if (isNonEmptyString(source?.url)) map.set(source.url, { ...source });
+  }
+  if (retrieval?.metadata instanceof Map) {
+    for (const [url, meta] of retrieval.metadata) {
+      if (!isNonEmptyString(url)) continue;
+      map.set(url, { ...map.get(url), ...meta });
+    }
+  }
+  return map;
+}
+
+/**
+ * Attach the display metadata the writer and reviewer need: title, original
+ * publisher, aggregator (`via`) and URL host. Publisher falls back to the host
+ * so a source that only names the aggregator cannot look independent.
+ */
+function titledSources(sources, titleMap, sourceMeta) {
+  return asArray(sources).map((source) => {
+    const meta = sourceMeta.get(source.url) ?? {};
+    return {
+      ...source,
+      title:
+        (isNonEmptyString(source.title) ? source.title : null) ??
+        (isNonEmptyString(meta.title) ? meta.title : null) ??
+        titleMap.get(source.url) ??
+        hostOf(source.url),
+      publisher:
+        (isNonEmptyString(source.publisher) ? source.publisher : null) ??
+        (isNonEmptyString(meta.publisher) ? meta.publisher : null) ??
+        publisherOf(source) ??
+        hostOf(source.url),
+      via:
+        (isNonEmptyString(source.via) ? source.via : null) ??
+        (isNonEmptyString(meta.via) ? meta.via : null) ??
+        viaOf(source),
+      host: hostOf(source.url),
+    };
+  });
 }
 
 /** Validate DSBOT_MODEL_* without ever echoing a value. */
@@ -281,6 +315,7 @@ function baseArticlePack({
     source_list: [],
     sources: [],
     facts: [],
+    key_facts: [],
     review: { verdict, score: null, issues_count: 0 },
     layout: {
       platform,
@@ -574,6 +609,7 @@ export async function runHarness(options = {}) {
     fetchImpl,
   });
   const titleMap = titleMapOf(retrieval);
+  const sourceMeta = sourceMetaOf(retrieval);
   const license = baseLicense();
 
   const counters = {
@@ -605,11 +641,23 @@ export async function runHarness(options = {}) {
   const write = async (context) => {
     counters.write += 1;
     if (!real) counters.fake_write += 1;
-    const draft = await writer({
+    const sources = titledSources(context.sources, titleMap, sourceMeta);
+    const keyFacts = selectKeyFacts(context.facts, sources);
+    let draft = await writer({
       ...context,
-      sources: titledSources(context.sources, titleMap, retrieval),
+      keyFacts,
+      sources,
       sourceTexts: retrieval.documents,
     });
+    if (draft && typeof draft.body === 'string' && draft.body.trim().length > 0) {
+      // The reviewer and the delivered article must see the same evidence:
+      // key facts under the title, citations on their sentences, and a source
+      // section with the snapshot summary and sha256 for every source.
+      draft = {
+        ...draft,
+        body: enrichArticleBody({ body: draft.body, keyFacts, sources }),
+      };
+    }
     capturedDraft = draft;
     if (isNonEmptyString(draft?.injected_fact)) injectedFact = draft.injected_fact.trim();
     if (Array.isArray(draft?.warnings)) draftWarnings.push(...draft.warnings);
@@ -619,12 +667,15 @@ export async function runHarness(options = {}) {
   const review = async (context) => {
     counters.review += 1;
     if (!real) counters.fake_review += 1;
+    const sources = titledSources(context.sources, titleMap, sourceMeta);
+    const keyFacts = selectKeyFacts(context.facts, sources);
     let modelReview = null;
     if (independentReviewer) {
       try {
         modelReview = await independentReviewer({
           ...context,
-          sources: titledSources(context.sources, titleMap, retrieval),
+          keyFacts,
+          sources,
           sourceTexts: retrieval.documents,
         });
       } catch (error) {
@@ -636,7 +687,8 @@ export async function runHarness(options = {}) {
       topic,
       article: context.article,
       facts: context.facts,
-      sources: titledSources(context.sources, titleMap, retrieval),
+      keyFacts,
+      sources,
       sourceTexts: retrieval.documents,
       license,
       mode,
@@ -785,21 +837,31 @@ export async function runHarness(options = {}) {
   const wordCount = Number.isFinite(pack?.layout?.word_count)
     ? pack.layout.word_count
     : countWords(pack?.body);
-  const titleByUrl = titleMapOf(retrieval);
-  const sourceMeta = new Map(asArray(retrieval.sources).map((source) => [source.url, source]));
-  const sourceList = asArray(pack?.sources).map((source, index) => ({
-    index: index + 1,
-    url: source.url,
-    title:
-      retrieval?.titles?.get?.(source.url) ??
-      titleByUrl.get(source.url) ??
-      hostOf(source.url),
-    publisher: sourceMeta.get(source.url)?.publisher ?? hostOf(source.url),
-    host: hostOf(source.url),
-    fetched_at: source.fetched_at,
-    sha256: source.sha256,
-    excerpt: source.excerpt,
-  }));
+  const sourceList = asArray(pack?.sources).map((source, index) => {
+    const meta = sourceMeta.get(source.url) ?? {};
+    return {
+      index: index + 1,
+      url: source.url,
+      title:
+        (isNonEmptyString(meta.title) ? meta.title : null) ??
+        (isNonEmptyString(source.title) ? source.title : null) ??
+        hostOf(source.url),
+      publisher:
+        (isNonEmptyString(meta.publisher) ? meta.publisher : null) ??
+        (isNonEmptyString(source.publisher) ? source.publisher : null) ??
+        publisherOf(source),
+      via:
+        (isNonEmptyString(meta.via) ? meta.via : null) ??
+        (isNonEmptyString(source.via) ? source.via : null) ??
+        null,
+      host: hostOf(source.url),
+      fetched_at: source.fetched_at,
+      sha256: source.sha256,
+      excerpt: source.excerpt,
+    };
+  });
+  const keyFacts = selectKeyFacts(asArray(pack?.facts), sourceList);
+  const keyClaims = new Set(keyFacts.map((fact) => fact.claim));
 
   const detectedClaims = asArray(capturedReview?.evidence?.unsupported_claims);
   const injection = {
@@ -834,11 +896,13 @@ export async function runHarness(options = {}) {
     tags,
     word_count: wordCount,
     source_list: sourceList,
-    sources: asArray(pack?.sources),
+    sources: sourceList.map(({ index: _index, ...source }) => source),
     facts: asArray(pack?.facts).map((fact, index) => ({
       id: isNonEmptyString(fact.id) ? fact.id : `F${index + 1}`,
       ...fact,
+      key: fact.key === true || keyClaims.has(fact.claim),
     })),
+    key_facts: keyFacts,
     review: {
       verdict:
         capturedReview?.verdict ??

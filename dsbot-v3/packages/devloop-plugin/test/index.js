@@ -11,3 +11,4 @@ import './composition.test.js';
 import './plugin.test.js';
 import './purity.test.js';
 import './bundle.test.js';
+import './install-layout.test.js';

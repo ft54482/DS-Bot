@@ -6,8 +6,14 @@
   "description": "L35 provisioner: allocate a port, generate a SuperAgent profile (cordis patch + prepare script + executor/policy settings), register the instance and run an injected health probe. All IO goes through injected fs/probe interfaces.",
   "main": "./src/index.js",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./src/*": "./src/*"
   },
+  "files": [
+    "src",
+    "bin",
+    "README.md"
+  ],
   "bin": {
     "dsbot-provisioner": "./bin/provision.js"
   },

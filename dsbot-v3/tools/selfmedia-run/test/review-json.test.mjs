@@ -114,7 +114,7 @@ test('reviewer retries once after unparseable JSON and records retry_count=1', a
   assert.match(retryPrompt.content, /不要解释/);
 });
 
-test('two unparseable reviewer responses end in review_invalid_json rework', async () => {
+test('three unparseable reviewer responses end in review_invalid_json rework', async () => {
   let calls = 0;
   const reviewer = createRealReviewer({
     chat: async () => {
@@ -130,14 +130,18 @@ test('two unparseable reviewer responses end in review_invalid_json rework', asy
     sourceTexts: new Map(),
   });
 
-  assert.equal(calls, 2);
+  assert.equal(calls, 3);
   assert.equal(modelReview.__parse_error, true);
-  assert.equal(modelReview.retry_count, 1);
+  assert.equal(modelReview.retry_count, 2);
+  assert.equal(modelReview.repair_attempts, 2);
   assert.equal(modelReview.reason, 'no_json_object');
 
   const result = await reviewFixture(modelReview);
   assert.equal(result.verdict, 'rework');
-  assert.ok(result.issues.some((issue) => issue.code === 'review_invalid_json'));
+  const issue = result.issues.find((entry) => entry.code === 'review_invalid_json');
+  assert.ok(issue);
+  assert.equal(issue.severity, 'critical');
+  assert.match(issue.message, /自动修复 2 次/);
 });
 
 test('a parsed review that omits rubric items still fails as rework', async () => {
@@ -184,4 +188,135 @@ test('a complete parsed review can still pass and exposes retry metadata', async
   assert.equal(result.issues.length, 0);
   assert.equal(result.evidence.reviewer_retry_count, 1);
   assert.equal(result.evidence.reviewer_parse_strategy, 'fence');
+});
+
+test('reviewer system prompt pins strict JSON and a numbered rubric checklist', async () => {
+  const prompts = [];
+  const reviewer = createRealReviewer({
+    chat: async (messages) => {
+      prompts.push(messages);
+      return { content: JSON.stringify(fullReview()), usage: null };
+    },
+  });
+  await reviewer({
+    topic: TOPIC,
+    article: { title_candidates: ['T1'], body: '# T' },
+    facts: [],
+    sources: [],
+    sourceTexts: new Map(),
+  });
+
+  const system = prompts[0][0];
+  assert.equal(system.role, 'system');
+  assert.match(system.content, /只输出一个 JSON 对象/);
+  assert.match(system.content, /不要 markdown/);
+  assert.match(system.content, /不要解释/);
+  assert.match(system.content, /事实核查口径/);
+  RUBRIC_IDS.forEach((id, index) => {
+    assert.ok(system.content.includes(`${index + 1}. ${id}`), `numbered checklist item ${id}`);
+    assert.ok(system.content.includes(`"${id}": {"score"`), `rubric schema field ${id}`);
+    assert.ok(system.content.includes(`"item": "${id}", "status": "pass"`), `checks schema item ${id}`);
+  });
+  assert.match(system.content, /"status": "pass\|warn\|fail"/);
+  assert.match(system.content, /"verdict"/);
+});
+
+test('reviewer feeds the previous output back for the first repair', async () => {
+  const prompts = [];
+  const first = '抱歉，这是一段说明文字，不是 JSON。';
+  const reviewer = createRealReviewer({
+    chat: async (messages) => {
+      prompts.push(messages);
+      return {
+        content: prompts.length === 1 ? first : JSON.stringify(fullReview()),
+        usage: null,
+      };
+    },
+  });
+
+  const result = await reviewer({
+    topic: TOPIC,
+    article: { title_candidates: ['T1'], body: '# T' },
+    facts: [],
+    sources: [],
+    sourceTexts: new Map(),
+  });
+
+  assert.equal(prompts.length, 2);
+  const repair = prompts[1];
+  const assistant = repair.find((message) => message.role === 'assistant');
+  assert.ok(assistant, 'previous reviewer output is fed back as an assistant message');
+  assert.equal(assistant.content, first);
+  const instruction = repair.at(-1);
+  assert.equal(instruction.role, 'user');
+  assert.match(instruction.content, /只把上面的评审改写为 JSON/);
+  assert.match(instruction.content, /不要新增内容/);
+  assert.match(instruction.content, /只输出 JSON/);
+  assert.equal(result.retry_count, 1);
+  assert.equal(result.verdict, 'passed');
+});
+
+test('a second repair succeeds after two unparseable responses (three calls)', async () => {
+  const prompts = [];
+  const replies = ['第一段不是 JSON。', '第二段仍然不是 JSON。', JSON.stringify(fullReview())];
+  const reviewer = createRealReviewer({
+    chat: async (messages) => {
+      prompts.push(messages);
+      return { content: replies[prompts.length - 1], usage: null };
+    },
+  });
+
+  const result = await reviewer({
+    topic: TOPIC,
+    article: { title_candidates: ['T1'], body: '# T' },
+    facts: [],
+    sources: [],
+    sourceTexts: new Map(),
+  });
+
+  assert.equal(prompts.length, 3);
+  assert.ok(
+    prompts[1].some((message) => message.role === 'assistant' && message.content === replies[0]),
+    'the first raw response is fed back for repair 1',
+  );
+  const finalRepair = prompts[2];
+  assert.ok(
+    finalRepair.some((message) => message.role === 'assistant' && message.content === replies[1]),
+    'the second raw response is fed back for repair 2',
+  );
+  const instruction = finalRepair.at(-1);
+  assert.match(instruction.content, /格式修复/);
+  assert.match(instruction.content, /"rubric"/);
+  assert.match(instruction.content, /"checks"/);
+  assert.equal(result.retry_count, 2);
+  assert.equal(result.repair_attempts, 2);
+  assert.equal(result.parse_strategy, 'direct');
+  assert.equal(result.verdict, 'passed');
+});
+
+test('reviewer checks are accepted and recorded with the parsed review', async () => {
+  const checks = RUBRIC_IDS.map((id) => ({ item: id, status: 'pass', evidence: `${id} ok` }));
+  const result = await reviewFixture({ ...fullReview(), checks, retry_count: 1, repair_attempts: 1 });
+
+  assert.equal(result.verdict, 'passed');
+  assert.equal(result.evidence.reviewer_checks.length, RUBRIC_IDS.length);
+  assert.deepEqual(result.evidence.reviewer_checks[0], {
+    item: 'factuality',
+    status: 'pass',
+    evidence: ['factuality ok'],
+  });
+  assert.equal(result.evidence.reviewer_repair_attempts, 1);
+});
+
+test('parseReview accepts the strict reviewer payload including checks', () => {
+  const payload = JSON.stringify({
+    rubric: { factuality: { score: 90, evidence: ['数字可核对'] } },
+    checks: [{ item: 'factuality', status: 'pass', evidence: '数字可核对' }],
+    issues: [],
+    verdict: 'passed',
+  });
+  const result = parseReview(payload);
+  assert.equal(result.ok, true);
+  assert.equal(result.strategy, 'direct');
+  assert.equal(result.value.checks[0].item, 'factuality');
 });

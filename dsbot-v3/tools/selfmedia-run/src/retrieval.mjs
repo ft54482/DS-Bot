@@ -49,6 +49,46 @@ export function hostOf(url) {
   }
 }
 
+/**
+ * Dual attribution: `publisher` is the original outlet (the authority for
+ * independent sourcing), while `via` names the aggregator that carried it
+ * (for example AIHOT). A source without an explicit publisher falls back to
+ * its URL host, so an aggregator-only source is still a single publisher.
+ */
+export function publisherOf(source) {
+  if (typeof source === 'string') return hostOf(source);
+  return (
+    firstString(
+      source?.publisher,
+      source?.original_source,
+      source?.originalSource,
+      source?.media,
+      source?.source_name,
+      source?.sourceName,
+    ) || hostOf(source?.url)
+  );
+}
+
+export function viaOf(source) {
+  if (!source || typeof source !== 'object') return null;
+  return (
+    firstString(
+      source.via,
+      source.via_source,
+      source.viaSource,
+      source.via_name,
+      source.viaName,
+      source.aggregator,
+      source.aggregator_name,
+      source.aggregatorName,
+    ) || null
+  );
+}
+
+function publisherKey(value) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
 export function isPrivateHostname(hostname) {
   const host = String(hostname ?? '').toLowerCase().replace(/^\[|\]$/g, '');
   if (!host) return true;
@@ -325,13 +365,15 @@ function normalizePackSource(raw, index) {
     });
   }
   const title = firstString(raw.title, raw.name) || hostOf(url) || url;
-  const publisher = firstString(raw.publisher, raw.sourceName, raw.source_name) || hostOf(url);
+  const publisher = publisherOf({ ...raw, url });
+  const via = viaOf(raw);
   const fetchedAt = firstString(raw.fetched_at, raw.fetchedAt, raw.published_at, raw.publishedAt) || null;
   const claims = asArray(raw.claims).map(normalizeClaim).filter(Boolean);
   return {
     url,
     title,
     publisher,
+    via,
     text,
     published_at: firstString(raw.published_at, raw.publishedAt) || null,
     fetched_at: fetchedAt,
@@ -359,16 +401,17 @@ export function deriveFactsFromSources(sources, { limit = MAX_FACT_COUNT } = {})
       if (sentence.length > 180) continue;
       if (seen.has(sentence)) continue;
       seen.add(sentence);
-      const refs = uniqueStrings(
-        sources
-          .filter((candidate) => String(candidate.text).includes(sentence))
-          .map((candidate) => candidate.url),
+      const supporting = sources.filter((candidate) =>
+        String(candidate.text).includes(sentence),
       );
-      const hosts = new Set(refs.map(hostOf).filter(Boolean));
+      const refs = uniqueStrings(supporting.map((candidate) => candidate.url));
+      const publishers = new Set(
+        supporting.map(publisherOf).filter(Boolean).map(publisherKey),
+      );
       facts.push({
         id: `F${facts.length + 1}`,
         claim: sentence,
-        key: hosts.size >= 2,
+        key: publishers.size >= 2,
         source_refs: refs,
       });
       if (facts.length >= limit) return facts;
@@ -394,11 +437,15 @@ function normalizePackFact(raw, index, sourceByUrl) {
         .map((source) => source.url),
     );
   }
-  const hosts = new Set(finalRefs.map(hostOf).filter(Boolean));
+  const publishers = new Set(
+    finalRefs
+      .map((ref) => publisherKey(publisherOf(sourceByUrl.get(ref) ?? { url: ref })))
+      .filter(Boolean),
+  );
   return {
     id: firstString(raw.id) || `F${index + 1}`,
     claim,
-    key: typeof raw.key === 'boolean' ? raw.key : hosts.size >= 2,
+    key: typeof raw.key === 'boolean' ? raw.key : publishers.size >= 2,
     source_refs: finalRefs,
   };
 }
@@ -418,13 +465,18 @@ function factsFromSourceClaims(sources) {
       entry.key = entry.key || claim.key === true;
     }
   }
+  const byUrl = new Map(sources.map((source) => [source.url, source]));
   return [...byClaim.values()].map((entry, index) => {
     const refs = [...entry.refs];
-    const hosts = new Set(refs.map(hostOf).filter(Boolean));
+    const publishers = new Set(
+      refs
+        .map((ref) => publisherKey(publisherOf(byUrl.get(ref) ?? { url: ref })))
+        .filter(Boolean),
+    );
     return {
       id: `F${index + 1}`,
       claim: entry.claim,
-      key: entry.key || hosts.size >= 2,
+      key: entry.key || publishers.size >= 2,
       source_refs: refs,
     };
   });
@@ -651,6 +703,8 @@ function normalizeSearchResult(raw, { allowFulltext = false } = {}) {
   return {
     url,
     title: firstString(raw.title, raw.name) || hostOf(url) || url,
+    publisher: publisherOf({ ...raw, url }),
+    via: viaOf(raw),
     snippet: summary,
     published_at: firstString(raw.published_at, raw.publishedAt, raw.date, raw.published) || null,
   };
@@ -712,6 +766,7 @@ export function createHttpRetrieval({
 
   const documents = new Map();
   const titles = new Map();
+  const metadata = new Map();
   const warnings = [];
   const stats = {
     search_calls: 0,
@@ -833,6 +888,8 @@ export function createHttpRetrieval({
       sources.push({
         url: item.url,
         title: item.title,
+        publisher: item.publisher,
+        via: item.via,
         text: text.slice(0, maxSourceChars),
         published_at: item.published_at,
         fetched_at: new Date(now()).toISOString(),
@@ -840,6 +897,12 @@ export function createHttpRetrieval({
       });
       documents.set(item.url, text.slice(0, maxSourceChars));
       titles.set(item.url, item.title);
+      metadata.set(item.url, {
+        url: item.url,
+        title: item.title,
+        publisher: item.publisher,
+        via: item.via,
+      });
       if (sources.length >= limit) break;
     }
 
@@ -855,6 +918,8 @@ export function createHttpRetrieval({
     return sources.map((source) => ({
       url: source.url,
       title: source.title,
+      publisher: source.publisher,
+      via: source.via,
       claims: facts
         .filter((fact) => fact.source_refs.includes(source.url))
         .map((fact) => ({ text: fact.claim, key: fact.key })),
@@ -896,6 +961,7 @@ export function createHttpRetrieval({
     search,
     fetch,
     titles,
+    metadata,
   };
 }
 

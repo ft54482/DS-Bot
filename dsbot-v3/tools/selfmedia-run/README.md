@@ -14,7 +14,8 @@
 
 - `createHttpRetrieval` 的 `fetchPages` 默认为 `false`；真实 HTTP 取料（`--real` 或 `--real --search`）只请求搜索/元数据端点，不请求任何文章正文 URL。
 - 搜索结果只采用 `title` 与 `snippet`/`summary`/`description`，摘要最长 300 字符；`text`/`content`/`body` 这类正文字段在默认路径上被忽略。
-- `article-pack.json` / `sources.json` 的 `source_list` 只有 URL、`fetched_at`、`sha256`、`excerpt`（≤300 字符），不含正文。
+- `article-pack.json` / `sources.json` 的 `source_list` 有 URL、标题、`publisher`、`via`、`fetched_at`、`sha256`、`excerpt`（≤300 字符），不含正文。
+- 双署名：`publisher` 是原始媒体（判断独立来源的依据），`via` 是转载/聚合方（如 AIHOT，只做说明）。只有 `via`、没有 `publisher` 时，publisher 回退为 URL 主机，不会被当成独立来源。
 - `--allow-fulltext` 是**违反 D-04 的调试后门**，默认关闭，只能与 `--real --search` 一起使用；不要用于本项目任何正式运行。
 
 ## 1. 默认 fake 模式（验收命令）
@@ -107,8 +108,10 @@ node tools/selfmedia-run/run.mjs --topic "离线选题" --out .tmp/offline \
   "topic": "离线选题",
   "sources": [
     {
-      "url": "https://example.com/a",
+      "url": "https://aihot.news/item/1",
       "title": "材料 A",
+      "publisher": "原始媒体甲",
+      "via": "AIHOT",
       "text": "材料正文……",
       "published_at": "2026-11-01T08:00:00.000Z",
       "claims": [{ "text": "可核查的句子。", "key": true }]
@@ -124,7 +127,9 @@ node tools/selfmedia-run/run.mjs --topic "离线选题" --out .tmp/offline \
 }
 ```
 
-- `facts` 可省略：会从来源正文中带数字/归属词的句子里抽取，并把两个独立主机都出现的句子标为 `key`。
+- `facts` 可省略：会从来源正文中带数字/归属词的句子里抽取，并把两个独立 `publisher`（缺失时回退主机）都出现的句子标为 `key`。
+- `publisher` / `via` 支持双署名；`sourceName` 作为 `publisher` 的别名。两个 URL 即使同属 `aihot.news`，只要 `publisher` 不同就算两个独立来源；只有一个 publisher 时仍记 `single_host_sourcing` warning 并返修。
+- 写作阶段从事实核查结果里挑 3-6 条关键事实（优先已验证、有来源引用的条目），正文对应句后自动补 `[n]`；`article-pack.json` 顶层输出 `key_facts: [{ claim, source_refs }]`。
 - 也接受 L43 topic-pack 字段：`sourceUrl`、`sourceName`、`summary`、`publishedAt`；`items`/`results` 包在 `{ items: [...] }` 里也可以。
 - `--offline` 且没有任何 source pack / snapshot 时：退出码 `3`，`article-pack.json` / `review.json` 状态为 `blocked`，`source_list` 为空，**不会静默编造来源**。
 
@@ -142,15 +147,17 @@ node tools/selfmedia-run/run.mjs --topic "测试选题" --out .tmp/rework --inje
 
 | 文件 | 内容 |
 |---|---|
-| `article-pack.json` | `title_candidates` / `chosen_title` / `body` / `tags` / `word_count` / `source_list` / `facts` / `review` / `layout` / `license_status`（`unauthorized`，附中文“未授权”）/ `publish.executed`（`false`）/ `warnings` / `blocks` / `injection`。 |
+| `article-pack.json` | `title_candidates` / `chosen_title` / `body`（含「## 关键事实」与带快照的「## 来源」）/ `tags` / `word_count` / `source_list` / `sources`（含 `publisher`/`via`/`sha256`/`excerpt`）/ `facts` / `key_facts`（`[{claim, source_refs}]`）/ `review` / `layout` / `license_status`（`unauthorized`，附中文“未授权”）/ `publish.executed`（`false`）/ `warnings` / `blocks` / `injection`。 |
 | `review.json` | `reviewer`（独立上下文 id）/ `verdict`（`passed` / `rework` / `blocked`）/ `score` / `rubric[]`（六项：事实与证据、来源与快照、结构、可读性、文风、合规，均带 `threshold`、`passed`、`evidence`）/ `issues[]` / `evidence`。 |
 | `report.json` | `steps[]`（各步 `duration_ms` 与调用计数）/ `model_calls` / `fake_model_calls` / `calls` / `usage` / `cost` / `retrieval` / `env`（只记录 host 与 key 是否存在）/ `injection` / `artifacts`。 |
 | `article.md` | 排版后的 Markdown 正文（可直接阅读/审阅）。 |
-| `sources.json` | 来源清单副本（URL、标题、host、抓取时间、sha256、摘要）。 |
+| `sources.json` | 来源清单副本（URL、标题、publisher、via、host、抓取时间、sha256、摘要）。 |
 
-独立审校不是“模型说好就过”：fake 模式用本地确定性 rubric；real 模式另起一次模型调用（不同 system prompt/上下文），但本地事实数字/来源/许可检查仍会执行，模型只能降低、不能抬高本地评分。
+独立审校不是“模型说好就过”：fake 模式用本地确定性 rubric；real 模式另起独立模型调用（不同 system prompt/上下文，JSON 解析失败时最多再做 2 次修复调用），但本地事实数字/来源/许可检查仍会执行，模型只能降低、不能抬高本地评分。
 
-真实模型的审校输出常带 ```json 围栏或解释文字，因此 `parseReview()` 依次尝试直接解析、解析代码块内容、截取第一个 `{` 到最后一个 `}` 后再解析；仍失败时自动重试 1 次并在提示词中强调“只输出 JSON，不要解释”。两次都无法解析才记 `review_invalid_json` 并按未通过处理，重试次数写入 `review.json` 的 `evidence.reviewer_retry_count`。解析成功但 rubric 缺项或评分证据缺失同样判 `rework`（`review_rubric_incomplete` / `review_evidence_missing`），不会因为“解析成功”放宽标准。
+真实模型的审校输出常带 ```json 围栏或解释文字，因此 `parseReview()` 依次尝试直接解析、解析代码块内容、截取第一个 `{` 到最后一个 `}` 后再解析。仍失败时最多再调用 2 次修复：第 1 次把上一次原始输出作为 assistant 消息喂回，要求“只把上面的评审改写为 JSON，不要新增内容”；第 2 次按固定 schema 做最终格式修复。三次都无法解析才记 `review_invalid_json` 并按未通过处理，修复次数写入 `review.json` 的 `evidence.reviewer_repair_attempts` / `reviewer_retry_count`。审校提示词使用编号 rubric 列表和固定 JSON schema（`rubric` / `checks` / `issues` / `verdict`），要求逐项返回 `{item, status, evidence}`。解析成功但 rubric 缺项或评分证据缺失同样判 `rework`（`review_rubric_incomplete` / `review_evidence_missing`），不会因为“解析成功”放宽标准。
+
+确定性事实核查只核对事实断言：建议、祈使和比较评价句（如以“建议/应该/要/可以…”开头，或含“而不是/优于/比…更好”）会跳过并记入 `evidence.skipped_opinion_claims`，不再误报 `unsupported_claim`；带数字的事实句和归属句仍照常核对来源。
 
 ## 6. 成本估算口径
 
@@ -177,7 +184,7 @@ node tools/selfmedia-run/run.mjs --topic "测试选题" --out .tmp/rework --inje
 node --test tools/selfmedia-run/test
 ```
 
-62 个用例，全部 fake 模型/fake 取料/fake MCP 桥，不联网：fake 全链路、工件形状、确定性、事实错误拦截、离线 blocked、离线快照、真实模式缺环境变量/不打印 key、真实模式 source pack + 注入模型响应、真实模式 `--search` 零正文抓取（注入 `fetchImpl` 记录全部请求 URL）、元数据摘要上限与正文字段忽略、`--allow-fulltext` 仅显式开启、source pack claims 派生事实、L43 topic-pack 字段兼容、成本公式、审校 rubric 合并、审校 JSON 三种解析路径与失败不抛异常、解析失败自动重试 1 次并记录 `retry_count`、两次失败判 `review_invalid_json`、rubric 缺项/证据缺失仍判 rework；以及 `--gateway bridge` 的会话只建一次、两次 prompt 复用同一 `sessionId`、prompt 顺序、分片 `dsh_follow`（服务端 ≤30 s、客户端 +5 s、`sinceSeq` 前进）、secret 只在 Bearer 头且不出现在工件/输出、空回复/超时/连接失败/审校阶段失败退出非 0 且不产出假稿、缺 secret 文件退出 2。`--real` / `--real --search` / `--gateway bridge` 的用例只使用注入的 fetch，不发起真实网络请求，也不读真实 secret 文件。
+83 个用例，全部 fake 模型/fake 取料/fake MCP 桥，不联网：fake 全链路、工件形状、确定性、事实错误拦截、离线 blocked、离线快照、真实模式缺环境变量/不打印 key、真实模式 source pack + 注入模型响应、真实模式 `--search` 零正文抓取（注入 `fetchImpl` 记录全部请求 URL）、元数据摘要上限与正文字段忽略、`--allow-fulltext` 仅显式开启、source pack claims 派生事实、L43 topic-pack 字段兼容、成本公式、审校 rubric 合并、审校 JSON 三种解析路径与失败不抛异常、解析失败后两次修复调用（喂回上一次输出、最终格式修复）与 3 次调用顺序、三次失败判 `review_invalid_json`、rubric 缺项/证据缺失仍判 rework、编号清单/视图句跳过（建议/观点句不误报，带数字事实句仍拦截）。来源与关键事实新增覆盖：来源小节带快照摘要与 sha256、`key_facts` 为 3 条且 refs 都能回到 `source_list`、关键事实句自动补 `[n]`（幂等）、双署名同主机不同 publisher 通过、单 publisher 仍 warning 返修、缺快照来源仍返修、`selectKeyFacts` 上限 6 条且过滤不存在的来源、package 读取 `publisher`/`via`（含 `sourceName`/`via_name` 别名）并按 publisher 判定双源。另有 `--gateway bridge` 的会话只建一次、两次 prompt 复用同一 `sessionId`、prompt 顺序、分片 `dsh_follow`（服务端 ≤30 s、客户端 +5 s、`sinceSeq` 前进）、secret 只在 Bearer 头且不出现在工件/输出、空回复/超时/连接失败/审校阶段失败退出非 0 且不产出假稿、缺 secret 文件退出 2。`--real` / `--real --search` / `--gateway bridge` 的用例只使用注入的 fetch，不发起真实网络请求，也不读真实 secret 文件。
 
 ## 9. 安全与边界
 

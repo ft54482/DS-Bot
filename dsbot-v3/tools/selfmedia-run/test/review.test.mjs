@@ -3,7 +3,11 @@ import test from 'node:test';
 
 import { createFixtureRetrieval, sha256Hex } from '../src/retrieval.mjs';
 import { createFakeWriter } from '../src/model.mjs';
-import { reviewArticle } from '../src/review.mjs';
+import {
+  extractSentences,
+  isOpinionOrAdviceSentence,
+  reviewArticle,
+} from '../src/review.mjs';
 
 const TOPIC = '测试选题';
 const NOW = () => 1700000000000;
@@ -191,4 +195,88 @@ test('review flags an attribution sentence with no matching fact', async () => {
       (claim) => claim.reason === 'attribution_without_source',
     ),
   );
+});
+
+function reviewBody(body, { facts = [], sources = [], sourceTexts = new Map() } = {}) {
+  return reviewArticle({
+    topic: 'T',
+    article: {
+      title_candidates: ['T1', 'T2', 'T3'],
+      body: ['# T', '', body, '', '## 来源', '', '[1] https://example.com/a', ''].join('\n'),
+    },
+    facts,
+    sources,
+    sourceTexts,
+    license: LICENSE,
+    now: NOW,
+  });
+}
+
+test('factuality skips a numbered advice/opinion sentence instead of reporting it', () => {
+  const sentence = '4. 用回滚率验收，而不是用「AI 会不会出错」争论。';
+  const result = reviewBody(sentence);
+  const factuality = result.rubric.find((item) => item.id === 'factuality');
+
+  assert.deepEqual(factuality.evidence.unsupported_claims, []);
+  assert.equal(factuality.evidence.skipped_opinion_count, 1);
+  assert.equal(
+    factuality.evidence.skipped_opinion_claims[0].claim,
+    '用回滚率验收，而不是用「AI 会不会出错」争论。',
+  );
+  assert.equal(factuality.evidence.skipped_opinion_claims[0].reason, 'opinion_or_advice');
+  assert.equal(result.evidence.skipped_opinion_claims.length, 1);
+});
+
+test('factuality skips recommendations even when they contain a number', () => {
+  const result = reviewBody('建议把回滚率阈值设为 42%。');
+  const factuality = result.rubric.find((item) => item.id === 'factuality');
+
+  assert.deepEqual(factuality.evidence.unsupported_claims, []);
+  assert.equal(factuality.evidence.skipped_opinion_count, 1);
+});
+
+test('factuality still blocks a declarative sentence with unsupported numbers', () => {
+  const sentence = '报告显示，错误率从 18% 降到 7%。';
+  const result = reviewBody(sentence);
+  const factuality = result.rubric.find((item) => item.id === 'factuality');
+
+  assert.equal(factuality.evidence.unsupported_claims.length, 1);
+  assert.equal(factuality.evidence.unsupported_claims[0].reason, 'numbers_not_in_sources');
+  assert.deepEqual(factuality.evidence.unsupported_claims[0].missing_numbers, ['18%', '7%']);
+  assert.equal(factuality.evidence.unsupported_claims[0].claim, sentence);
+  assert.equal(factuality.passed, false);
+});
+
+test('factuality strips ordered-list markers before extracting numbers', () => {
+  const result = reviewBody('4. 报告显示，错误率从 18% 降到 7%。');
+  const factuality = result.rubric.find((item) => item.id === 'factuality');
+  const entry = factuality.evidence.unsupported_claims[0];
+
+  assert.equal(entry.claim, '报告显示，错误率从 18% 降到 7%。');
+  assert.deepEqual(entry.missing_numbers, ['18%', '7%']);
+  assert.equal(entry.missing_numbers.includes('4'), false);
+});
+
+test('factuality still checks 可以看到 sentences that state a number', () => {
+  const result = reviewBody('可以看到，错误率从 18% 降到 7%。');
+  const factuality = result.rubric.find((item) => item.id === 'factuality');
+
+  assert.equal(factuality.evidence.unsupported_claims.length, 1);
+  assert.equal(factuality.evidence.skipped_opinion_count, 0);
+});
+
+test('extractSentences removes ordered-list markers but keeps decimal facts', () => {
+  const sentences = extractSentences('# T\n\n4. 用回滚率验收。\n\n5. 错误率降到 7.5%。');
+  assert.deepEqual(
+    sentences.map((sentence) => sentence.text),
+    ['用回滚率验收。', '错误率降到 7.5%。'],
+  );
+});
+
+test('opinion detection covers advice leads and comparisons only', () => {
+  assert.equal(isOpinionOrAdviceSentence('应该先统一术语。'), true);
+  assert.equal(isOpinionOrAdviceSentence('A 方案优于 B 方案。'), true);
+  assert.equal(isOpinionOrAdviceSentence('4. 用回滚率验收，而不是争论。'), true);
+  assert.equal(isOpinionOrAdviceSentence('研究表明，错误率为 18%。'), false);
+  assert.equal(isOpinionOrAdviceSentence('可以看到，错误率为 18%。'), false);
 });

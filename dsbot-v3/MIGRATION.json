@@ -6,9 +6,9 @@
     "entry": "tools/migrate/bundle.mjs"
   },
   "sourceRepo": "ft54482/superagent-lab-smoke",
-  "sourceCommit": "96fdc949ec3802b2cc7ca50165d8c6d701748385",
+  "sourceCommit": "cfc46172441675870dadd143634e891484fc0177",
   "sourceBranch": null,
-  "generatedAt": "2026-11-20T21:27:22.523Z",
+  "generatedAt": "2026-11-20T22:40:15.287Z",
   "generatedAtSource": "clock",
   "bundleRoot": "dsbot-v3",
   "excludedDirNames": [
@@ -17,13 +17,13 @@
     "tmp",
     ".git"
   ],
-  "fileCount": 555,
-  "totalBytes": 3003420,
+  "fileCount": 560,
+  "totalBytes": 3061415,
   "sections": {
     "packages": {
-      "fileCount": 469,
-      "bytes": 2335619,
-      "sha256": "88e8c2843bd6082fc9faa08caf72ade122e3822dbd0b13ac54f5b137c33aa163"
+      "fileCount": 472,
+      "bytes": 2346218,
+      "sha256": "7362feda3d1d4caf71cd8aedc04ed7eecbc2ddd67482d4322502b8c538355120"
     },
     "tests": {
       "fileCount": 51,
@@ -31,9 +31,9 @@
       "sha256": "6119ce2fb881763d7345e3ff76fbf542426878da6e92122b5c40769da7cb7903"
     },
     "tools": {
-      "fileCount": 33,
-      "bytes": 341744,
-      "sha256": "b08cf32dd7cc8494b1e2ccf7a886eb1d72a701042a13984880f82e288a084300"
+      "fileCount": 35,
+      "bytes": 389140,
+      "sha256": "0177a3a109e1f4d42c9660c1ad0b9f341cf8d01665523b9748fb463637bfe91a"
     }
   },
   "packages": [
@@ -75,9 +75,9 @@
     {
       "dir": "packages/autoloop",
       "name": "@dsbot/autoloop",
-      "fileCount": 22,
-      "bytes": 117616,
-      "sha256": "74373938784c871170c018fb8b88986acd89b15e0df2f3cfdf9c6ba0646eada2"
+      "fileCount": 23,
+      "bytes": 118387,
+      "sha256": "92d3e164f36a191c3304168da7a17983381c539a18d10655b4fa4df85de29d99"
     },
     {
       "dir": "packages/bridge",
@@ -124,9 +124,9 @@
     {
       "dir": "packages/devloop-plugin",
       "name": "@dsbot/devloop-plugin",
-      "fileCount": 15,
-      "bytes": 83399,
-      "sha256": "aeca0a9a2663c020bef6322d8be0194d1867a352a312b13bb9714aabdf1dc145"
+      "fileCount": 17,
+      "bytes": 92987,
+      "sha256": "32e07f80e9740561a58785a34ede237f027d0ca466d796ab80f659448bc3909e"
     },
     {
       "dir": "packages/dsbot-adapter",
@@ -146,8 +146,8 @@
       "dir": "packages/goal-engine",
       "name": "@dsbot/goal-engine",
       "fileCount": 14,
-      "bytes": 51658,
-      "sha256": "045cbe250f11b88916ab911dad6e69abc2318ec6bca5ee3203628c0fb33899bc"
+      "bytes": 51734,
+      "sha256": "89a291963d973c4f223cf8a19ae5df0e422bc822ac5c6eacb5fe97dd120ecd5b"
     },
     {
       "dir": "packages/loop",
@@ -216,8 +216,8 @@
       "dir": "packages/provisioner",
       "name": "@dsbot/provisioner",
       "fileCount": 24,
-      "bytes": 76395,
-      "sha256": "eed341bdf3ee08e660467d368b40f4242ce090c5400b03e592b7b8326d08a797"
+      "bytes": 76483,
+      "sha256": "117429af904a4c6bfd9c595e6dd267258a2e54e02d86b49e19aef43e8556f613"
     },
     {
       "dir": "packages/recovery",
@@ -265,8 +265,8 @@
       "dir": "packages/verifier-agent",
       "name": "@dsbot/verifier-agent",
       "fileCount": 12,
-      "bytes": 43665,
-      "sha256": "8a4ed7902600b2369f38d9baa612d6ee00c2433cd89ad3ecde1e7daea9b17ff2"
+      "bytes": 43741,
+      "sha256": "6692174d3a00412b2771f5664d0a9fcf16e2f7cb07fec2de86eb5d99abc2659a"
     }
   ],
   "packageNames": [
@@ -316,7 +316,7 @@
     {
       "path": "README.md",
       "bytes": 3450,
-      "sha256": "d13e5ca0f835db7f66348a2d1588181a252d9c89e181877b98bf776fd3aadd0b"
+      "sha256": "53540d842fe388f71eb88c9e31ce9542cbbefa4272df4627972b90213197c186"
     },
     {
       "path": "docs/prd/01-data-model.sql",
@@ -685,8 +685,8 @@
     },
     {
       "path": "packages/autoloop/package.json",
-      "bytes": 497,
-      "sha256": "cbbddea035aa5a10103a7f8cad66e31e27e8788487798257daf513bd5401617a"
+      "bytes": 589,
+      "sha256": "23d919d1757bd677657fd151856c5412d976532c551e425875b439358947f94a"
     },
     {
       "path": "packages/autoloop/scripts/acceptance.mjs",
@@ -700,8 +700,8 @@
     },
     {
       "path": "packages/autoloop/src/constants.js",
-      "bytes": 2015,
-      "sha256": "704c8d8841971b9f35aecca1aa20178ae2b2e726cc509c4adade8a909e4746e5"
+      "bytes": 2189,
+      "sha256": "10494551cef866fbee918255852b84ef3d998090b98d878400da973d28943286"
     },
     {
       "path": "packages/autoloop/src/index.js",
@@ -755,13 +755,18 @@
     },
     {
       "path": "packages/autoloop/test/index.js",
-      "bytes": 514,
-      "sha256": "7a6c7888abad45ec1ae44fb3e8aec8b871942d877148c8c6eae20262de1b2e1e"
+      "bytes": 542,
+      "sha256": "ca5e3fd1ea2c5dcd3d8f4e602f4e783a6d06211f599c07de292011262fbdf992"
     },
     {
       "path": "packages/autoloop/test/merge.test.js",
       "bytes": 6049,
       "sha256": "c1f46e1e994c638972539bf821aa3dde3136451ca20026b71b262026eb99a868"
+    },
+    {
+      "path": "packages/autoloop/test/policy.test.js",
+      "bytes": 477,
+      "sha256": "a2dc4b7f335003c1c379ff489e437634efceeeb2e6c6fd601dbf7a6ec61c5132"
     },
     {
       "path": "packages/autoloop/test/purity.test.js",
@@ -1195,8 +1200,8 @@
     },
     {
       "path": "packages/devloop-plugin/README.md",
-      "bytes": 5986,
-      "sha256": "93a67bfbc16d7c5c0aae94868f693e3a8cefd9df506bf5e68f4e19fbc9a3f320"
+      "bytes": 8269,
+      "sha256": "f507d0c3ee29192336102183af321a810699c05c0f70444289303301b4b5dc6d"
     },
     {
       "path": "packages/devloop-plugin/cordis.patch.yml",
@@ -1205,8 +1210,13 @@
     },
     {
       "path": "packages/devloop-plugin/package.json",
-      "bytes": 710,
-      "sha256": "79f9436baaee559c6917a81e21adbda48f77e3768bc3406d993ed772b8a8cfa8"
+      "bytes": 1054,
+      "sha256": "df1ceeb52693830613b30596bed41775becd03e0b9561965c0e41222acd94807"
+    },
+    {
+      "path": "packages/devloop-plugin/src/deps.js",
+      "bytes": 2916,
+      "sha256": "576532d6a067a61c8ff32636e25819b3cf36ba89b104f61e0d369587fe370369"
     },
     {
       "path": "packages/devloop-plugin/src/errors.js",
@@ -1220,8 +1230,8 @@
     },
     {
       "path": "packages/devloop-plugin/src/manager.js",
-      "bytes": 27169,
-      "sha256": "ce789e5af5f3e782ef173690da79dd78fef5a974a781a3388d2217f23bf3e9c6"
+      "bytes": 27490,
+      "sha256": "659d13fc9bd591550e1efe82e940f425c75fa75d2b9f5a956ec21064cb2c3379"
     },
     {
       "path": "packages/devloop-plugin/src/tools.js",
@@ -1230,8 +1240,8 @@
     },
     {
       "path": "packages/devloop-plugin/test/bundle.test.js",
-      "bytes": 1122,
-      "sha256": "e631da1a9933012bca9304dd5dc63f0a601ffc7e93ea963225ef07a1d9b4b232"
+      "bytes": 2143,
+      "sha256": "8d37e7eb80ffd433b79dd703da33e7309e6c1423191116617065d4cdd3322c52"
     },
     {
       "path": "packages/devloop-plugin/test/composition.test.js",
@@ -1240,8 +1250,13 @@
     },
     {
       "path": "packages/devloop-plugin/test/index.js",
-      "bytes": 485,
-      "sha256": "e401d8d84b441b4e1c5eb487975665e7db35ec9be2622b38b5e6cbcdb8d2df28"
+      "bytes": 521,
+      "sha256": "cec579713e00b8b3fd59574e12f5a13504a0ed15eba746eeb48f7b3311320372"
+    },
+    {
+      "path": "packages/devloop-plugin/test/install-layout.test.js",
+      "bytes": 2482,
+      "sha256": "504f8aefd690830ffa619d78207f7612221170965d55f75d71df2e15331dce75"
     },
     {
       "path": "packages/devloop-plugin/test/lifecycle.test.js",
@@ -1255,8 +1270,8 @@
     },
     {
       "path": "packages/devloop-plugin/test/purity.test.js",
-      "bytes": 1664,
-      "sha256": "ad99762cef871d7a9f11a68bda30ec0bc65ccfa65c22caf4f50742b3e00badda"
+      "bytes": 1849,
+      "sha256": "509b11421ca27e736d92d947730f6e95283304cc7f8a13262ab6d3bda284d0ae"
     },
     {
       "path": "packages/devloop-plugin/test/support/harness.js",
@@ -1420,8 +1435,8 @@
     },
     {
       "path": "packages/goal-engine/package.json",
-      "bytes": 438,
-      "sha256": "f22c931dd3d831415daaaca9070f1ec34d9734048e672995bb93328e96f6649d"
+      "bytes": 514,
+      "sha256": "6a8799996c185311f530e684e17ab2950ad29c4bee1bcba97709220d6996fb20"
     },
     {
       "path": "packages/goal-engine/src/constants.js",
@@ -2070,8 +2085,8 @@
     },
     {
       "path": "packages/provisioner/package.json",
-      "bytes": 592,
-      "sha256": "52062bc3ee76378d978f8943e465de83219af9c68eba6b29225cf33707d2077b"
+      "bytes": 680,
+      "sha256": "6e031bbcdab37a395ddb024a2a3d03524e86594bb6b0f072c8a6d4f969b2ebc2"
     },
     {
       "path": "packages/provisioner/src/cli.js",
@@ -2615,8 +2630,8 @@
     },
     {
       "path": "packages/verifier-agent/package.json",
-      "bytes": 540,
-      "sha256": "9009484b8353e1780fda370d563c7fdde97b67f058b779bf3be5eeabd0ac817e"
+      "bytes": 616,
+      "sha256": "b1d6085829a1d1a34d63aae301b6a2e2cadd655eee370b1870a6fa6484e9416c"
     },
     {
       "path": "packages/verifier-agent/src/cases.js",
@@ -2985,8 +3000,8 @@
     },
     {
       "path": "tools/selfmedia-run/README.md",
-      "bytes": 14933,
-      "sha256": "adcaed587408258890a3288c540e7282b41a8bfa97dff19843f005e26f7e1705"
+      "bytes": 17246,
+      "sha256": "d19fbc2803e8be3a04cccdceb4e51f757f93d5cdb5ca2133ba276a4bf83c4083"
     },
     {
       "path": "tools/selfmedia-run/run.mjs",
@@ -2999,19 +3014,24 @@
       "sha256": "334259d93e00087b1cdde4df4c3e0e1043cbdc58d487ac5ec4415f98f1599f6b"
     },
     {
+      "path": "tools/selfmedia-run/src/attribution.mjs",
+      "bytes": 9998,
+      "sha256": "23c6fb1c46e085e55496c52296fb454b7beb8bd855eb4c7b87b3e2088d12ac93"
+    },
+    {
       "path": "tools/selfmedia-run/src/errors.mjs",
       "bytes": 1450,
       "sha256": "1e0d186c62fb40acec144f16c4c9a2acf2008f534a8dceb1138a021d4e7f5c49"
     },
     {
       "path": "tools/selfmedia-run/src/harness.mjs",
-      "bytes": 28686,
-      "sha256": "4b4dae6136e92584146ab737c8551a6def54f60cecfc23e7d2e658d5fc3d17d4"
+      "bytes": 31090,
+      "sha256": "f2bcac9104c0650aa2f01fd51cf83b510dc6b44b6b4a651a3588ae60dbeb65d7"
     },
     {
       "path": "tools/selfmedia-run/src/model.mjs",
-      "bytes": 23293,
-      "sha256": "7c5f2bd3362363aa1549afb54cb44f06c8b3865bfe7d3140ffaad7663a0e96d7"
+      "bytes": 27545,
+      "sha256": "2bff53f835eb675c2adbde3545fc9969dc943ce0955ff3a7835e7b8cf7bcaba1"
     },
     {
       "path": "tools/selfmedia-run/src/report.mjs",
@@ -3020,13 +3040,18 @@
     },
     {
       "path": "tools/selfmedia-run/src/retrieval.mjs",
-      "bytes": 30378,
-      "sha256": "98c8ddcc6e22035c4d0d1574d0451c874c6c7f91b9ae761a099dd89f1504d1e6"
+      "bytes": 32201,
+      "sha256": "7ad8a22d2c2a5b368caa39b3a12a385a9e13443025228bf3f34eb9b02af8cc56"
     },
     {
       "path": "tools/selfmedia-run/src/review.mjs",
-      "bytes": 27841,
-      "sha256": "977b4dc94d6e313c08fe36b8d61f017fd94f78978bf7ae2fbb19d8299362ed6f"
+      "bytes": 33187,
+      "sha256": "b328e2e52ab730eac8f2c971d45a610840ed7f27f5a303dc4dc672f84296f6de"
+    },
+    {
+      "path": "tools/selfmedia-run/test/attribution.test.mjs",
+      "bytes": 12072,
+      "sha256": "515ee0df5483d4f2ba3d9d19a67688623255b4ab4df58326399ef4b14673ac9d"
     },
     {
       "path": "tools/selfmedia-run/test/bridge-gateway.test.mjs",
@@ -3060,18 +3085,18 @@
     },
     {
       "path": "tools/selfmedia-run/test/review-json.test.mjs",
-      "bytes": 7193,
-      "sha256": "f605e42bc13e2adf7cc8523f44236150de29b73ce9a7c2035cac26649ce79380"
+      "bytes": 12382,
+      "sha256": "a1b8b5dd0f0e0c465572c279b44c68940396188e56bbd33fca2c2383b02bab8c"
     },
     {
       "path": "tools/selfmedia-run/test/review.test.mjs",
-      "bytes": 6332,
-      "sha256": "22e3be36c7281cf85c8a3dbd880d07214cbf120bbc86cee01b31fa91de4a60ae"
+      "bytes": 10297,
+      "sha256": "2d867ac0c29fa21ea708b91a18d3c67b8e7edcbd66a5947e8f06c597f983c232"
     },
     {
       "path": "tools/selfmedia-run/test/run-all.mjs",
-      "bytes": 516,
-      "sha256": "a6b917902843addb5b66d25247b2bb452e82598b690e14b063c7b1da1285c4f4"
+      "bytes": 550,
+      "sha256": "d4c46cad2a67a3a7b3b53257ea01a0bd5e179e10962cfccfc2f601c975b09294"
     },
     {
       "path": "tools/selfmedia-run/test/support.mjs",

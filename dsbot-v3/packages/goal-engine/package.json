@@ -6,8 +6,13 @@
   "description": "L33 goal engine: pure decompose({goal, prdIndex, lanes, budget}) that turns a goal into dispatchable task books with six mandatory sections.",
   "main": "./src/index.js",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./src/*": "./src/*"
   },
+  "files": [
+    "src",
+    "README.md"
+  ],
   "scripts": {
     "test": "node --test test"
   },

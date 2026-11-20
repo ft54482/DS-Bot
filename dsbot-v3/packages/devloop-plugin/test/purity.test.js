@@ -17,9 +17,12 @@ const FORBIDDEN = [
   /XMLHttpRequest/,
   /\.homedir\(\)/,
   /process\.env/,
+  // Cross-package relative imports break once the plugin is installed under
+  // `node_modules/@dsbot`; packages must be reached by name (see src/deps.js).
+  /(?:from|import\s*\()\s*['"]\.\.\/\.\.\//,
 ];
 
-test('source has no ambient fs, network, child-process, home-directory or env access', () => {
+test('source has no ambient IO or cross-package relative imports', () => {
   for (const file of readdirSync(SRC).filter((name) => name.endsWith('.js'))) {
     const text = readFileSync(path.join(SRC, file), 'utf8');
     for (const pattern of FORBIDDEN) {

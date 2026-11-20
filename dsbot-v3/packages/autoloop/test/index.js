@@ -12,3 +12,4 @@ import './recovery.test.js';
 import './adapters.test.js';
 import './validation.test.js';
 import './purity.test.js';
+import './policy.test.js';

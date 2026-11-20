@@ -17,6 +17,9 @@ import { join, resolve } from 'node:path';
 import { createGateway, fetchTransport } from '../../../packages/model-gateway/src/index.js';
 
 import { ConfigError, ModelError } from './errors.mjs';
+import { renderSourceLines } from './attribution.mjs';
+import { publisherOf, viaOf } from './retrieval.mjs';
+import { RUBRIC_ITEMS } from './review.mjs';
 
 export const DEFAULT_WRITER_MODEL = 'deterministic-fake-writer';
 export const DEFAULT_REVIEWER_MODEL = 'deterministic-reviewer';
@@ -111,11 +114,6 @@ function citationFor(fact, sources) {
   return [...new Set(indexes)].join('');
 }
 
-function sourceLine(source, index) {
-  const title = isNonEmptyString(source.title) ? ` — ${source.title}` : '';
-  return `[${index + 1}] ${source.url}${title}`;
-}
-
 /**
  * Deterministic fake writer. All prose comes from the checked facts passed by
  * the content chain; with `injectFactError` it appends exactly one unsupported
@@ -159,7 +157,7 @@ export function fakeWrite(context, { injectFactError = false } = {}) {
     '',
     '## 来源',
     '',
-    ...sources.map((source, index) => sourceLine(source, index)),
+    ...renderSourceLines(sources),
     '',
   ].join('\n');
 
@@ -463,7 +461,13 @@ function sourceBlock(sources, sourceTexts, limit = 3000) {
   return asArray(sources)
     .map((source, index) => {
       const text = sourceTexts?.get?.(source.url) ?? source.excerpt ?? '';
-      return `[${index + 1}] ${source.url}\n标题：${source.title ?? ''}\n原文摘录：${String(text).slice(0, limit)}`;
+      const publisher = publisherOf(source) || '未知来源';
+      const via = viaOf(source);
+      const attribution = via && via !== publisher ? `${publisher}（via ${via}）` : publisher;
+      return (
+        `[${index + 1}] ${source.url}\n标题：${source.title ?? ''}\n出版方：${attribution}\n` +
+        `原文摘录：${String(text).slice(0, limit)}`
+      );
     })
     .join('\n\n');
 }
@@ -474,6 +478,18 @@ function factBlock(facts) {
       (fact, index) =>
         `${index + 1}. ${fact.claim}\n   关键事实：${fact.key === true ? '是' : '否'}\n   来源：${asArray(fact.source_refs).join(', ')}`,
     )
+    .join('\n');
+}
+
+function keyFactBlock(keyFacts, sources) {
+  return asArray(keyFacts)
+    .map((fact, index) => {
+      const indexes = asArray(fact.source_refs)
+        .map((ref) => sources.findIndex((source) => source.url === ref))
+        .filter((sourceIndex) => sourceIndex >= 0)
+        .map((sourceIndex) => `[${sourceIndex + 1}]`);
+      return `${index + 1}. ${fact.claim} 来源：${[...new Set(indexes)].join('') || '（无）'}`;
+    })
     .join('\n');
 }
 
@@ -504,9 +520,11 @@ export function createRealWriter({ chat, injectFactError = false } = {}) {
         content:
           `选题：${topic}\n平台：${context?.platform ?? 'wechat'}\n\n` +
           `已核查事实：\n${factBlock(context?.facts) || '（无）'}\n\n` +
+          `重点事实（正文必须逐条覆盖，句末标 [n]）：\n` +
+          `${keyFactBlock(context?.keyFacts, asArray(context?.sources)) || '（无）'}\n\n` +
           `来源：\n${sourceBlock(context?.sources, context?.sourceTexts) || '（无）'}\n\n` +
           '正文要求：以 # 标题开头；包含「## 事实与引用」「## 可以怎么做」「## 待确认」「## 来源」小节；' +
-          '来源小节逐条列出 [n] URL；不要写发布许可结论。',
+          '每个事实句后标 [n]；来源小节先写 [n] URL 即可，快照摘要与哈希由 harness 补齐；不要写发布许可结论。',
       },
     ];
     const result = await chat(messages, { temperature: 0.4 });
@@ -535,34 +553,95 @@ export function createRealWriter({ chat, injectFactError = false } = {}) {
   };
 }
 
-/** Appended to the reviewer prompt for the single repair attempt. */
+/* ------------------------------------------------------- reviewer prompting */
+
+/** Numbered rubric checklist handed to the model, one line per dimension. */
+export const REVIEW_RUBRIC_CHECKLIST = Object.freeze(
+  RUBRIC_ITEMS.map(
+    (item, index) => `${index + 1}. ${item.id}（${item.label}）：${item.description}`,
+  ),
+);
+
+const CHECKLIST_TEXT = REVIEW_RUBRIC_CHECKLIST.join('\n');
+const RUBRIC_IDS = RUBRIC_ITEMS.map((item) => item.id);
+
+/**
+ * Strict output schema. The field names and the six rubric/check ids are fixed;
+ * values are illustrative. This is embedded in the reviewer prompt so a model
+ * that follows instructions cannot choose a different shape.
+ */
+export const REVIEW_JSON_SCHEMA = `{
+  "rubric": {
+${RUBRIC_IDS.map(
+  (id) => `    "${id}": {"score": 90, "evidence": ["针对 ${id} 的具体依据"]}`,
+).join(',\n')}
+  },
+  "checks": [
+${RUBRIC_IDS.map(
+  (id) => `    {"item": "${id}", "status": "pass", "evidence": "针对 ${id} 的具体依据"}`,
+).join(',\n')}
+  ],
+  "issues": [
+    {"code": "unsupported_number", "severity": "critical", "message": "正文中的数字没有来源支持", "evidence": {"claim": "原文句子"}}
+  ],
+  "verdict": "passed"
+}`;
+
+export const REVIEW_SYSTEM_PROMPT = [
+  '你是独立审校，与写作者不共享上下文。只依据给定的文章、已核查事实和来源原文评分，不要改写文章。',
+  '',
+  '严格输出要求：',
+  '- 只输出一个 JSON 对象，从 { 开始、到 } 结束；不要 markdown、不要输出代码围栏、不要解释、不要输出 JSON 以外的任何文字。',
+  '- 顶层字段名固定为 rubric、checks、issues、verdict；不得改名、增删或嵌套到其他字段。',
+  '- rubric 必须覆盖全部六个维度，每项格式为 {"score": 0-100 的整数, "evidence": ["至少一条具体证据"]}。',
+  '- checks 必须按下面的编号逐项返回 {"item": 维度 id, "status": "pass|warn|fail", "evidence": "具体依据"}，六项都要有。',
+  '- issues 只放确实需要返修的问题；建议、润色偏好和可选优化放进 evidence，不要放进 issues。',
+  '',
+  '评分维度（逐项检查）：',
+  CHECKLIST_TEXT,
+  '',
+  '事实核查口径：只有陈述事实的句子（含数字、归属、研究结论）才算事实断言；祈使、建议、观点和比较评价句不是事实断言。',
+  '以“要/应该/建议/别/不要/值得/可以”开头，或含“而不是/优于/比…更好”等比较评价的句子，不要据此报 unsupported_claim。',
+  '但带数字的事实陈述仍必须核对来源。',
+  '',
+  '输出 schema（字段名与层级固定，取值仅示意）：',
+  REVIEW_JSON_SCHEMA,
+  '',
+  '只输出上面这个 JSON 对象。',
+].join('\n');
+
+/** Appended to the reviewer prompt for each repair attempt. */
 const REVIEW_FORMAT_REMINDER =
   '上一次输出无法解析为 JSON。请只输出 JSON，不要解释，不要输出 JSON 以外的任何文字。';
+
+const REVIEW_REPAIR_INSTRUCTION =
+  '只把上面的评审改写为 JSON，不要新增内容，也不要删除或改动任何评审结论。';
+
+const REVIEW_FINAL_REPAIR_INSTRUCTION =
+  '格式修复：只输出一个合法 JSON 对象，不要 markdown 代码围栏，不要解释。' +
+  '字段名固定为 rubric、checks、issues、verdict；rubric 和 checks 都必须按编号覆盖六个维度。';
+
+/** Reviewer conversation budget: one normal call plus at most two repairs. */
+const MAX_REPAIR_ATTEMPTS = 2;
 
 /**
  * Real independent reviewer: a separate chat completion with a different
  * system prompt. Deterministic checks are still applied by reviewArticle().
  *
- * If the first response cannot be parsed (prose, fence, truncated object),
- * the call is repeated once with an explicit "JSON only" reminder. Only when
- * both responses fail does the result become __parse_error, which
- * reviewArticle() turns into a critical review_invalid_json issue.
+ * JSON reliability is a three-tier fallback:
+ *   1. the normal review call, parsed by parseReview();
+ *   2. one repair call that feeds the previous output back and asks the model
+ *      to rewrite only that review as JSON (no new content);
+ *   3. a final strict format-repair call with the fixed schema.
+ * If all three responses are unparseable the result becomes __parse_error,
+ * which reviewArticle() turns into a critical review_invalid_json issue. The
+ * reviewer never invents a passing review to avoid that outcome.
  */
 export function createRealReviewer({ chat } = {}) {
   if (typeof chat !== 'function') throw new ModelError('real reviewer requires chat()');
   return async (context) => {
     const messages = [
-      {
-        role: 'system',
-        content:
-          '你是独立审校，与写作者不共享上下文。只依据给定的文章、已核查事实和来源原文评分，' +
-          '不要改写文章。按六个维度各给 0-100 分：factuality（事实与证据）、sourcing（来源与快照）、' +
-          'structure（结构完整）、readability（可读性）、style（文风）、compliance（合规与许可）。' +
-          '只把确实需要返修的问题放进 issues；建议类内容放进 evidence，不要放进 issues。' +
-          '输出 JSON：{"rubric":{"factuality":{"score":n,"evidence":["..."]},...},' +
-          '"issues":[{"code":"...","severity":"critical|warning","message":"...","evidence":{}}],' +
-          '"verdict":"passed|rework"}。不要输出 JSON 以外的内容。',
-      },
+      { role: 'system', content: REVIEW_SYSTEM_PROMPT },
       {
         role: 'user',
         content:
@@ -570,50 +649,57 @@ export function createRealReviewer({ chat } = {}) {
             .map((title, index) => `${index + 1}. ${title}`)
             .join('\n')}\n\n正文：\n${context?.article?.body ?? ''}\n\n` +
           `已核查事实：\n${factBlock(context?.facts) || '（无）'}\n\n` +
-          `来源：\n${sourceBlock(context?.sources, context?.sourceTexts, 2000) || '（无）'}\n\n` +
-          '请特别检查正文中的数字、归属句和来源引用是否真的能在来源中找到。',
+          `重点事实（正文应在对应句后标 [n]）：\n` +
+          `${keyFactBlock(context?.keyFacts, asArray(context?.sources)) || '（无）'}\n\n` +
+          `来源（publisher 才能证明独立，via 只是聚合方）：\n` +
+          `${sourceBlock(context?.sources, context?.sourceTexts, 2000) || '（无）'}\n\n` +
+          '请按六个编号维度逐项检查，并在 checks 中逐项返回 {item, status, evidence}；' +
+          '只输出一个 JSON 对象，事实核查不要误报建议/观点句。',
       },
     ];
-    const result = await chat(messages, { temperature: 0 });
-    const parsed = parseReview(result.content);
-    if (parsed.ok && isPlainObject(parsed.value)) {
-      return {
-        ...parsed.value,
-        usage: result.usage ?? null,
-        retry_count: 0,
-        parse_strategy: parsed.strategy,
-      };
+
+    let conversation = messages;
+    let lastContent = '';
+    let lastReason = null;
+    let lastUsage = null;
+
+    for (let repairAttempt = 0; repairAttempt <= MAX_REPAIR_ATTEMPTS; repairAttempt += 1) {
+      const result = await chat(conversation, { temperature: 0 });
+      lastContent = String(result?.content ?? '');
+      lastUsage = result?.usage ?? lastUsage;
+      const parsed = parseReview(lastContent);
+      if (parsed.ok && isPlainObject(parsed.value)) {
+        return {
+          ...parsed.value,
+          usage: result.usage ?? null,
+          retry_count: repairAttempt,
+          repair_attempts: repairAttempt,
+          parse_strategy: parsed.strategy,
+        };
+      }
+
+      lastReason = parsed.ok ? 'not_an_object' : parsed.reason;
+      if (repairAttempt === MAX_REPAIR_ATTEMPTS) break;
+
+      const instruction =
+        repairAttempt === 0
+          ? `${REVIEW_FORMAT_REMINDER}\n${REVIEW_REPAIR_INSTRUCTION}\n上一次的解析错误：${lastReason}。`
+          : `${REVIEW_FORMAT_REMINDER}\n${REVIEW_FINAL_REPAIR_INSTRUCTION}\n` +
+            `上一次的解析错误：${lastReason}。\n严格按以下 schema 输出：\n${REVIEW_JSON_SCHEMA}`;
+      conversation = [
+        ...conversation,
+        { role: 'assistant', content: lastContent },
+        { role: 'user', content: instruction },
+      ];
     }
 
-    // One repair attempt: same context plus an explicit format reminder.
-    const reason = parsed.ok ? 'not_an_object' : parsed.reason;
-    const retryMessages = [
-      ...messages,
-      {
-        role: 'user',
-        content:
-          `${REVIEW_FORMAT_REMINDER}\n` +
-          (parsed.ok
-            ? 'JSON 顶层必须是对象，不能是数组或标量。'
-            : `上一次的解析错误：${reason}。`),
-      },
-    ];
-    const retry = await chat(retryMessages, { temperature: 0 });
-    const retryParsed = parseReview(retry.content);
-    if (retryParsed.ok && isPlainObject(retryParsed.value)) {
-      return {
-        ...retryParsed.value,
-        usage: retry.usage ?? result.usage ?? null,
-        retry_count: 1,
-        parse_strategy: retryParsed.strategy,
-      };
-    }
     return {
       __parse_error: true,
-      reason: retryParsed.ok ? 'not_an_object' : retryParsed.reason,
-      raw: String(retry.content ?? '').slice(0, 500),
-      usage: retry.usage ?? result.usage ?? null,
-      retry_count: 1,
+      reason: lastReason ?? 'no_json_object',
+      raw: lastContent.slice(0, 500),
+      usage: lastUsage,
+      retry_count: MAX_REPAIR_ATTEMPTS,
+      repair_attempts: MAX_REPAIR_ATTEMPTS,
     };
   };
 }

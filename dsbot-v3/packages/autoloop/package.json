@@ -6,8 +6,14 @@
   "description": "L34 dev loop driver: plan -> dispatch -> collect -> verify -> merge -> next with rework, per-task budget, no-progress stop-loss and crash recovery.",
   "main": "./src/index.js",
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./src/*": "./src/*"
   },
+  "files": [
+    "src",
+    "scripts",
+    "README.md"
+  ],
   "scripts": {
     "test": "node --test test",
     "acceptance": "node scripts/acceptance.mjs"

@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/goal-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L33 goal engine: pure decompose({goal, prdIndex, lanes, budget}) that turns a goal into dispatchable task books with six mandatory sections.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

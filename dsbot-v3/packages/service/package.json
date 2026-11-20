@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot-v3/service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L2 task/run/acceptance state machine and guards. Pure functions with an injected, in-memory state store; no database dependency.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

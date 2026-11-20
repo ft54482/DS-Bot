@@ -1,0 +1,8 @@
+{
+  "name": "@dsbot-v3/migrate-test",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tests for tools/migrate/bundle.mjs. `main` makes `node --test tools/migrate/test` resolve to an aggregator on Node versions that treat a directory argument as a single entry point (observed on Node 25.2.0).",
+  "main": "./run-all.mjs"
+}

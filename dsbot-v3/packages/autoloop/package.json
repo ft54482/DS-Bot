@@ -1,0 +1,18 @@
+{
+  "name": "@dsbot/autoloop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L34 dev loop driver: plan -> dispatch -> collect -> verify -> merge -> next with rework, per-task budget, no-progress stop-loss and crash recovery.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test",
+    "acceptance": "node scripts/acceptance.mjs"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

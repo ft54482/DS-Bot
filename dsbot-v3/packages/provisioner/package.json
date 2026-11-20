@@ -1,0 +1,20 @@
+{
+  "name": "@dsbot/provisioner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L35 provisioner: allocate a port, generate a SuperAgent profile (cordis patch + prepare script + executor/policy settings), register the instance and run an injected health probe. All IO goes through injected fs/probe interfaces.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "bin": {
+    "dsbot-provisioner": "./bin/provision.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

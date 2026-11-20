@@ -1,0 +1,30 @@
+{
+  "name": "@dsbot/devloop-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L40 DSH bundle: model-facing loop_start / loop_status / loop_stop tools that compose goal-engine, autoloop, provisioner and verifier-agent.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

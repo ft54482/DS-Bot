@@ -1,0 +1,13 @@
+{
+  "name": "@dsbot-v3/e2e",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L5 end-to-end acceptance: the PRD's 10-step minimal closed loop over packages/service and packages/adapters/mock.",
+  "scripts": {
+    "test": "node --test ."
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

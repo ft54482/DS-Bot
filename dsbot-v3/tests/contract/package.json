@@ -1,0 +1,13 @@
+{
+  "name": "@dsbot-v3/contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L15 cross-package contract tests: runtime + api + cli + e2e semantics under real composition.",
+  "scripts": {
+    "test": "node --test ."
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

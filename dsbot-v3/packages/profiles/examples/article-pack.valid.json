@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "article": {
+    "title": "为什么跟 AI 聊得越久，做事反而越乱？",
+    "body": "A complete example body: hook, main line, evidence with citations, and a close.",
+    "author": {
+      "id": "content-bot",
+      "context_id": "ctx-writer-example"
+    }
+  },
+  "facts": [
+    {
+      "id": "F1",
+      "key": true,
+      "statement": "Long AI sessions increase context noise and slow down task execution.",
+      "sources": [
+        {
+          "url": "https://alpha.example/research/ai-attention",
+          "publisher": "Alpha Research",
+          "published_at": "2026-10-01T00:00:00.000Z",
+          "fetched_at": "2026-10-02T00:00:00.000Z",
+          "snapshot": {
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "captured_at": "2026-10-02T00:00:00.000Z",
+            "excerpt": "The study reports that unresolved context accumulates across long sessions."
+          }
+        },
+        {
+          "url": "https://beta.example/news/ai-context",
+          "publisher": "Beta News",
+          "published_at": "2026-10-03T00:00:00.000Z",
+          "fetched_at": "2026-10-04T00:00:00.000Z",
+          "snapshot": {
+            "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "captured_at": "2026-10-04T00:00:00.000Z",
+            "excerpt": "Engineers describe slower decisions when context instructions conflict."
+          }
+        }
+      ]
+    },
+    {
+      "id": "F2",
+      "key": true,
+      "statement": "Structured restatement of the goal restores task focus.",
+      "sources": [
+        {
+          "url": "https://gamma.example/report/restatement",
+          "publisher": "Gamma Institute",
+          "published_at": "2026-09-20T00:00:00.000Z",
+          "fetched_at": "2026-09-21T00:00:00.000Z",
+          "snapshot": {
+            "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "captured_at": "2026-09-21T00:00:00.000Z",
+            "excerpt": "Participants who restated the goal recovered focus more often."
+          }
+        },
+        {
+          "url": "https://delta.example/blog/context-reset",
+          "publisher": "Delta Blog",
+          "published_at": "2026-10-05T00:00:00.000Z",
+          "fetched_at": "2026-10-06T00:00:00.000Z",
+          "snapshot": {
+            "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            "captured_at": "2026-10-06T00:00:00.000Z",
+            "excerpt": "A short restatement before each step keeps the working set small."
+          }
+        }
+      ]
+    }
+  ],
+  "quality": {
+    "reviewer": {
+      "id": "reviewer-example",
+      "context_id": "ctx-review-example",
+      "independent": true,
+      "model": "deepseek-v4.1-flash"
+    },
+    "rubric": {
+      "structure": { "score": 86, "issues": [] },
+      "readability": { "score": 82, "issues": [] },
+      "style": { "score": 84, "issues": [] }
+    }
+  },
+  "layout": {
+    "titles": [
+      "跟 AI 聊得越久越乱？",
+      "AI 对话的注意力陷阱",
+      "为什么越聊越不会做事"
+    ],
+    "tags": ["AI", "认知", "效率"],
+    "cover_copy": "聊得越久，做事越乱",
+    "platform": "wechat",
+    "account": "翔解"
+  },
+  "citations": {
+    "total_chars": 2500,
+    "quoted_chars": 150
+  },
+  "compliance": {
+    "risks": []
+  }
+}

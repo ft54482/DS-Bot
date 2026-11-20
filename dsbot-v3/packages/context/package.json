@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/context",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L14 level-aware context pack assembly: pure buildContextPack({level,task,recent,budgets}) with hard token budgets, priority trimming and drill-down pointers only (no raw logs).",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

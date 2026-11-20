@@ -1,0 +1,12 @@
+# Devloop bundle patch template.
+#
+# Copy this file (or point `dsh.bundle.patch` at it) into a DSH profile's
+# bundle layer. The entry registers the plugin that exposes:
+#
+#   loop_start / loop_status / loop_stop
+#
+# `install_bundle` applies this patch automatically after the package is
+# installed from a `file:` spec.
+- insert:
+    - id: devloop-plugin
+      name: '@dsbot/devloop-plugin'

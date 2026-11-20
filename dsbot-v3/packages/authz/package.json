@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/authz",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L12 authorization gates: scope subset, budget min-chain and hard-rule blocking. Pure functions; no IO and no dependencies.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

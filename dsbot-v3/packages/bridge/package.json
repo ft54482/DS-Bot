@@ -1,0 +1,19 @@
+{
+  "name": "@ds-bot/bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L20 DS Bot integration adapter: env allowlist mapping, dispatch/result receipts, PRD error conversion",
+  "exports": {
+    ".": "./src/index.js",
+    "./constants": "./src/constants.js",
+    "./env": "./src/env.js",
+    "./errors": "./src/errors.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/acceptance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L31 three-stage acceptance engine: pure evaluate({stage, task, evidence, rubric}) for execution/business/goal, with evidence hash verification and no child-to-parent promotion.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

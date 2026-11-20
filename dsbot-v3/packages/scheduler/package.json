@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/scheduler",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L23 dispatch scheduler: tick() loop over queued runs with maxWorkers limiting, failure backoff and outbox records. Pure logic with an injected clock.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

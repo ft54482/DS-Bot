@@ -1,0 +1,20 @@
+{
+  "name": "@dsbot-v3/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L10 operator CLI. A pure runCli(argv, deps) entry point over the L9 runtime facade; no state-machine logic is reimplemented here.",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "bin": {
+    "superagent": "./bin/cli.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

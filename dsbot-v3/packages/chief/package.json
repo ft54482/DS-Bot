@@ -1,0 +1,17 @@
+{
+  "name": "@dsbot/chief",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "L46 Chief coordination layer: create goals, delegate to registered business BOTs, aggregate status, and deliver a result package only after every business acceptance passes. No execution dispatch.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

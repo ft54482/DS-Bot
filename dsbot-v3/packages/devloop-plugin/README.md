@@ -5,8 +5,8 @@
 | 工具 | 作用 |
 |---|---|
 | `loop_start({ goal, lanes, budgetCny, maxWorkers })` | 用 goal-engine 拆任务书、用 autoloop 起循环，返回 `loopId` |
-| `loop_status({ loopId })` | 返回 `{ state, iteration, running, stoppedReason? }` |
-| `loop_stop({ loopId, reason })` | 停止并写入不可恢复的停止原因 |
+| `loop_status({ loopId? })` | 带 `loopId` 返回 `{ state, iteration, running, stoppedReason? }`；不带则返回 `{ loops, count }` |
+| `loop_stop({ loopId?, reason })` | 停止并写入不可恢复的停止原因；不带 `loopId` 时只允许停唯一的在跑 loop |
 
 插件内部组合 `goal-engine`、`autoloop`、`provisioner`、`verifier-agent`。
 所有外部接缝（`sa` / `git` / `gh` / verifier `runner` / `fs`）都是注入的；
@@ -157,6 +157,11 @@ loop_start {
 之后：
 
 ```text
+loop_status {}
+→ { "loops": [ { "loopId": "loop-mf3k2-1", "state": "collect",
+    "goal": "给设置页加导出按钮", "startedAt": 1700000000000, ... } ],
+    "count": 1 }
+
 loop_status { "loopId": "loop-mf3k2-1" }
 → { "state": "collect", "iteration": 1, "running": true }
 
@@ -165,13 +170,20 @@ loop_stop { "loopId": "loop-mf3k2-1", "reason": "需求撤回" }
     "running": false, "stoppedReason": "需求撤回", "irreversible": true }
 ```
 
+`loop_status` 不传 `loopId` 时列出当前全部 loop；一个都没有时返回
+`{ "loops": [], "count": 0 }`，不是错误。第一次调用的人可以先用它拿到 id。
+`loop_stop` 也可以不传 `loopId`：只有一个在跑 loop 时停止它，多个在跑时抛
+`ambiguous_loop` 并列出候选，避免误停。
+
 ## 行为与错误码
 
 - 同一 goal（按标题归一化）只能起一个 loop；重复调用抛
   `loop_exists`。停止后也不可重新起同一 goal：停止标记不可恢复。
 - lane 的 `cost` 合计超过 `budgetCny` 时抛 `budget_exceeded`，在起循环前
   拒绝，不产生派工。
-- 不存在的 `loopId` 在 `loop_status` / `loop_stop` 中都抛 `not_found`。
+- 不存在的 `loopId` 在 `loop_status` / `loop_stop` 中都抛 `loop_not_found`，
+  消息和 `details.available` 里带当前最多 5 个可用 `loopId`；没有 loop 时
+  提示先调用 `loop_start`。
 - `loop_start` 会执行到第一次 `collect` 等待点后返回（plan → dispatch →
   collect），因此返回时已有任务书和派工；后续推进可由宿主用 manager 的
   `advance(loopId)` 驱动，三个工具本身不跑后台定时器。
@@ -187,7 +199,8 @@ loop_stop { "loopId": "loop-mf3k2-1", "reason": "需求撤回" }
 | `empty_goal` | goal 为空 |
 | `loop_exists` | 同一 goal 已有 loop |
 | `budget_exceeded` | lane cost 合计超预算 |
-| `not_found` | loopId 不存在 |
+| `loop_not_found` | loopId 不存在，消息附最多 5 个候选 id |
+| `ambiguous_loop` | `loop_stop` 不带 loopId 但有多个在跑 loop |
 | `missing_dependency` | 缺少 sa/git/scheduler/merger/runner/fs 等注入 |
 | `provision_failed` | provisioner 创建实例失败 |
 | `loop_error` | 驱动 loop 时出现未分类错误 |
@@ -206,9 +219,10 @@ loop_stop { "loopId": "loop-mf3k2-1", "reason": "需求撤回" }
 node --test packages/devloop-plugin/test
 ```
 
-当前 42 条用例，覆盖：三个工具定义与 schema、DSH schema 子集校验、
-真实 goal-engine 拆任务、重复 goal、超预算、未知 loopId、停止与幂等、
-PASS 闭环完成、FAIL 触发 stop-loss、sa/git/gh 适配器、verifier-agent
-runner 注入、provisioner fake fs、bundle 声明、四个兄弟包的 `./src/*` 子路径
-导出与 `files` 声明、纯度扫描，以及安装布局（`node_modules/@dsbot`）下的
-import。
+当前 54 条用例，覆盖：三个工具定义与 schema（`loopId` 可选）、DSH schema
+子集校验、真实 goal-engine 拆任务、重复 goal、超预算、未知 loopId
+（`loop_not_found` + 最多 5 个候选）、无 loopId 的列表与停止（空列表、单
+loop、多 loop、`ambiguous_loop`）、停止与幂等、PASS 闭环完成、FAIL 触发
+stop-loss、sa/git/gh 适配器、verifier-agent runner 注入、provisioner fake
+fs、bundle 声明、四个兄弟包的 `./src/*` 子路径导出与 `files` 声明、纯度扫描，
+以及安装布局（`node_modules/@dsbot`）下的 import。

@@ -112,11 +112,13 @@ function assertSupportedSubset(schema, at) {
   if ('enum' in schema) assert.ok(Array.isArray(schema.enum), `${at}.enum`);
 }
 
-test('loop_status and loop_stop schemas require only loopId', () => {
-  assert.deepEqual(LOOP_STATUS_INPUT_SCHEMA.required, ['loopId']);
-  assert.deepEqual(LOOP_STOP_INPUT_SCHEMA.required, ['loopId']);
+test('loop_status and loop_stop schemas make loopId optional', () => {
+  assert.equal(LOOP_STATUS_INPUT_SCHEMA.required, undefined);
+  assert.equal(LOOP_STOP_INPUT_SCHEMA.required, undefined);
   assert.equal(LOOP_STATUS_INPUT_SCHEMA.additionalProperties, false);
   assert.equal(LOOP_STOP_INPUT_SCHEMA.additionalProperties, false);
+  assert.equal(LOOP_STATUS_INPUT_SCHEMA.properties.loopId.type, 'string');
+  assert.equal(LOOP_STOP_INPUT_SCHEMA.properties.loopId.type, 'string');
   assert.equal(LOOP_STOP_INPUT_SCHEMA.properties.reason.default, 'manual');
 });
 
@@ -185,5 +187,17 @@ test('loop_stop handler forwards the reason and defaults to manual', async () =>
   assert.deepEqual(manager.calls, [
     { method: 'stop', loopId: 'loop-9', reason: 'budget froze' },
     { method: 'stop', loopId: 'loop-9', reason: 'manual' },
+  ]);
+});
+
+test('an omitted loopId reaches the manager as undefined for status and stop', async () => {
+  const manager = fakeManager();
+
+  createLoopStatusTool({ manager }).handler({});
+  await createLoopStopTool({ manager }).handler({});
+
+  assert.deepEqual(manager.calls, [
+    { method: 'status', loopId: undefined },
+    { method: 'stop', loopId: undefined, reason: 'manual' },
   ]);
 });

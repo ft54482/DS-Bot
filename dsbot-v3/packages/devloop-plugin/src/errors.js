@@ -4,7 +4,8 @@
  * Callers branch on `error.code` and never parse a message. The codes mirror
  * the underlying engines where they have an equivalent (`empty_goal`,
  * `budget_exceeded`) and add the plugin-level vocabulary (`loop_exists`,
- * `not_found`, `missing_dependency`, `provision_failed`, `loop_error`).
+ * `loop_not_found`, `ambiguous_loop`, `missing_dependency`,
+ * `provision_failed`, `loop_error`).
  */
 
 export const ERROR_CODES = Object.freeze({
@@ -12,7 +13,8 @@ export const ERROR_CODES = Object.freeze({
   emptyGoal: 'empty_goal',
   loopExists: 'loop_exists',
   budgetExceeded: 'budget_exceeded',
-  notFound: 'not_found',
+  loopNotFound: 'loop_not_found',
+  ambiguousLoop: 'ambiguous_loop',
   missingDependency: 'missing_dependency',
   provisionFailed: 'provision_failed',
   loopError: 'loop_error',

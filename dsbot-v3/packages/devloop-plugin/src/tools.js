@@ -141,23 +141,29 @@ export const LOOP_START_INPUT_SCHEMA = {
   },
 };
 
-/** JSON Schema for `loop_status` arguments. */
+/** JSON Schema for `loop_status` arguments. `loopId` is optional on purpose. */
 export const LOOP_STATUS_INPUT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['loopId'],
   properties: {
-    loopId: { type: 'string', description: 'Non-empty id returned by loop_start.' },
+    loopId: {
+      type: 'string',
+      description:
+        'Optional id returned by loop_start. Omit it to list every loop with its id, state, goal and startedAt.',
+    },
   },
 };
 
-/** JSON Schema for `loop_stop` arguments. */
+/** JSON Schema for `loop_stop` arguments. `loopId` is optional on purpose. */
 export const LOOP_STOP_INPUT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['loopId'],
   properties: {
-    loopId: { type: 'string', description: 'Non-empty id returned by loop_start.' },
+    loopId: {
+      type: 'string',
+      description:
+        'Optional id returned by loop_start. Omit it to stop the only running loop; several running loops fail with ambiguous_loop.',
+    },
     reason: {
       type: 'string',
       default: 'manual',
@@ -194,7 +200,7 @@ export function createLoopStatusTool({ manager } = {}) {
   return {
     name: 'loop_status',
     description:
-      'Read one loop: state, completed iteration (plan round), whether it is still running, and the recorded stop reason after a stop or stop-loss. Unknown loopId fails with not_found.',
+      'Read loop state. With loopId, return that loop: state, completed iteration (plan round), whether it is still running, and the recorded stop reason after a stop or stop-loss. Without loopId, return { loops, count } so a caller with no id yet can discover one; an empty manager returns count 0 instead of an error. Unknown loopId fails with loop_not_found and lists up to five available ids.',
     inputSchema: LOOP_STATUS_INPUT_SCHEMA,
     handler: (input) => manager.status(input?.loopId),
   };
@@ -211,7 +217,7 @@ export function createLoopStopTool({ manager } = {}) {
   return {
     name: 'loop_stop',
     description:
-      'Stop one loop and record the reason as an irreversible marker. The loop cannot be resumed; loop_status afterwards reports state "stopped" with stoppedReason. Unknown loopId fails with not_found.',
+      'Stop a loop and record the reason as an irreversible marker. The loop cannot be resumed; loop_status afterwards reports state "stopped" with stoppedReason. Without loopId, stop the only running loop; several running loops fail with ambiguous_loop and list the candidates. Unknown loopId fails with loop_not_found and lists up to five available ids.',
     inputSchema: LOOP_STOP_INPUT_SCHEMA,
     handler: (input) => manager.stop(input?.loopId, input?.reason ?? 'manual'),
   };

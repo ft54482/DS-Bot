@@ -91,18 +91,19 @@ test('a goal-engine budget_exceeded is surfaced with the same code', async () =>
   });
 });
 
-test('an unknown loopId reports not_found for status and stop', async () => {
+test('an unknown loopId reports loop_not_found for status and stop', async () => {
   const { manager } = createHarness();
 
   assert.throws(
     () => manager.status('loop-missing'),
     (error) => {
-      assert.equal(error.code, 'not_found');
+      assert.equal(error.code, 'loop_not_found');
       assert.equal(error.details.loopId, 'loop-missing');
+      assert.match(error.message, /no loops exist yet/);
       return true;
     },
   );
-  await rejectsWithCode(manager.stop('loop-missing', 'nope'), 'not_found');
+  await rejectsWithCode(manager.stop('loop-missing', 'nope'), 'loop_not_found');
 });
 
 test('loop_stop records the reason and status reports stopped', async () => {

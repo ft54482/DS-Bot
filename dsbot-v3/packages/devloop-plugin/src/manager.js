@@ -151,23 +151,37 @@ export function createDevloopManager(options = {}) {
   /**
    * Read the public loop status.
    *
-   * @param {string} loopId
+   * With a `loopId` this keeps the original detail shape. Without one it
+   * lists every loop this manager knows, so a caller that has no id yet can
+   * discover one instead of receiving a dead-end error.
+   *
+   * @param {string} [loopId]
    * @returns {{ state: string, iteration: number, running: boolean,
-   *   stoppedReason?: string }}
+   *   stoppedReason?: string } | { loops: object[], count: number }}
    */
   function status(loopId) {
+    if (isOmittedLoopId(loopId)) {
+      const summaries = list();
+      return { loops: summaries, count: summaries.length };
+    }
     return statusOf(requireLoop(loopId, loops));
   }
 
   /**
    * Stop a loop with an irreversible marker.
    *
-   * @param {string} loopId
+   * Without a `loopId` the manager stops the single running loop; when more
+   * than one is running it refuses with `ambiguous_loop` and lists the
+   * candidates instead of picking one arbitrarily.
+   *
+   * @param {string} [loopId]
    * @param {string} [reason='manual']
    * @returns {Promise<object>} status plus `loopId` and `irreversible: true`
    */
   async function stop(loopId, reason = 'manual') {
-    const record = requireLoop(loopId, loops);
+    const record = isOmittedLoopId(loopId)
+      ? resolveStopTarget(loops)
+      : requireLoop(loopId, loops);
     if (typeof reason !== 'string' || reason.trim() === '') {
       throw devloopError(ERROR_CODES.invalidInput, 'reason must be a non-empty string');
     }
@@ -637,6 +651,7 @@ function summaryOf(record) {
   return {
     loopId: record.loopId,
     goal: record.goalTitle,
+    startedAt: record.createdAt,
     budgetCny: record.budgetCny,
     maxWorkers: record.maxWorkers,
     baseSha: record.baseSha,
@@ -669,14 +684,73 @@ function waited(actions) {
   return Array.isArray(actions) && actions.some((action) => action.type === 'wait');
 }
 
+function isOmittedLoopId(loopId) {
+  return (
+    loopId === undefined
+    || loopId === null
+    || (typeof loopId === 'string' && loopId.trim() === '')
+  );
+}
+
+/**
+ * Pick the implicit `loop_stop` target: only a single running loop is
+ * unambiguous, so zero or several running loops fail with an actionable error.
+ *
+ * @param {Map<string, object>} loops
+ * @returns {object}
+ */
+function resolveStopTarget(loops) {
+  const running = [...loops.values()].filter((record) => statusOf(record).running);
+  if (running.length === 1) return running[0];
+  if (running.length === 0) {
+    throw devloopError(
+      ERROR_CODES.loopNotFound,
+      `no running loop to stop; ${availabilityHint(loops)}`,
+      { available: availableIds(loops) },
+    );
+  }
+
+  const candidates = running.map((record) => record.loopId);
+  throw devloopError(
+    ERROR_CODES.ambiguousLoop,
+    `more than one loop is running; pass loopId to choose one of: ${formatIds(candidates)}`,
+    { candidates },
+  );
+}
+
+/** At most five current loop ids, as required by the not-found hint. */
+function availableIds(loops) {
+  return [...loops.keys()].slice(0, 5);
+}
+
+function formatIds(ids) {
+  const shown = ids.slice(0, 5).join(', ');
+  const hidden = ids.length - 5;
+  return hidden > 0 ? `${shown}, ... (${hidden} more)` : shown;
+}
+
+function availabilityHint(loops) {
+  if (loops.size === 0) {
+    return 'no loops exist yet; call loop_start to create one, then call loop_status without loopId';
+  }
+  return `available loopIds: ${formatIds([...loops.keys()])}; omit loopId to list all loops`;
+}
+
 function requireLoop(loopId, loops) {
   if (typeof loopId !== 'string' || loopId.trim() === '') {
-    throw devloopError(ERROR_CODES.invalidInput, 'loopId must be a non-empty string');
+    throw devloopError(
+      ERROR_CODES.invalidInput,
+      'loopId must be a non-empty string; omit it to list loops or stop the only running loop',
+    );
   }
   const id = loopId.trim();
   const record = loops.get(id);
   if (record === undefined) {
-    throw devloopError(ERROR_CODES.notFound, `loop "${id}" was not found`, { loopId: id });
+    throw devloopError(
+      ERROR_CODES.loopNotFound,
+      `loop "${id}" was not found; ${availabilityHint(loops)}`,
+      { loopId: id, available: availableIds(loops) },
+    );
   }
   return record;
 }

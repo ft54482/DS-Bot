@@ -6,6 +6,7 @@
  * the `*.test.js` files and re-imports them from the module cache.
  */
 import './tools.test.js';
+import './status-list.test.js';
 import './lifecycle.test.js';
 import './composition.test.js';
 import './plugin.test.js';

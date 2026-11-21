@@ -6,9 +6,9 @@
     "entry": "tools/migrate/bundle.mjs"
   },
   "sourceRepo": "ft54482/superagent-lab-smoke",
-  "sourceCommit": "17d46ed9932700cf46b98577f644b7930552189e",
+  "sourceCommit": "3ff7343717e45cfc4f6c53906cc2fb9d23d5c96e",
   "sourceBranch": null,
-  "generatedAt": "2026-11-20T22:57:30.592Z",
+  "generatedAt": "2026-11-21T08:03:08.671Z",
   "generatedAtSource": "clock",
   "bundleRoot": "dsbot-v3",
   "excludedDirNames": [
@@ -17,13 +17,13 @@
     "tmp",
     ".git"
   ],
-  "fileCount": 560,
-  "totalBytes": 3062264,
+  "fileCount": 561,
+  "totalBytes": 3073470,
   "sections": {
     "packages": {
-      "fileCount": 472,
-      "bytes": 2347067,
-      "sha256": "69a427b6edbd16b0e70502704c5bed332ada8173f6ff02bcd6b23834fe625efe"
+      "fileCount": 473,
+      "bytes": 2358273,
+      "sha256": "92f663d519211f942e6615eb689cc6d15ae882e13e00730682e7cb771c514c6b"
     },
     "tests": {
       "fileCount": 51,
@@ -124,9 +124,9 @@
     {
       "dir": "packages/devloop-plugin",
       "name": "@dsbot/devloop-plugin",
-      "fileCount": 17,
-      "bytes": 93836,
-      "sha256": "620c796686a9fd3791e54402a85c48d9e15d8663116f5f904710d3ddf45a5dfc"
+      "fileCount": 18,
+      "bytes": 105042,
+      "sha256": "c4cb8afd4a7a61ed74a05724f2d8543a832800ae75d3fbf4e81ce942629fa388"
     },
     {
       "dir": "packages/dsbot-adapter",
@@ -316,7 +316,7 @@
     {
       "path": "README.md",
       "bytes": 3450,
-      "sha256": "f5bb1aeb99dc8784774f2355511301e0ffa3e3806538db4247eec5bfb62a2d42"
+      "sha256": "a791633fe385328caf37ce8305709624dc52bb3a63058f364dc8f80ddb9300ed"
     },
     {
       "path": "docs/prd/01-data-model.sql",
@@ -1200,8 +1200,8 @@
     },
     {
       "path": "packages/devloop-plugin/README.md",
-      "bytes": 8269,
-      "sha256": "f507d0c3ee29192336102183af321a810699c05c0f70444289303301b4b5dc6d"
+      "bytes": 9287,
+      "sha256": "cfe6aae7c17053218dc9d6f75f760a02c8231f0c3bb3a55919de591a922663b5"
     },
     {
       "path": "packages/devloop-plugin/cordis.patch.yml",
@@ -1220,8 +1220,8 @@
     },
     {
       "path": "packages/devloop-plugin/src/errors.js",
-      "bytes": 1486,
-      "sha256": "748a1965392af9b64e220e5b5c4375942585fc20f20607839c664f2e8e024310"
+      "bytes": 1558,
+      "sha256": "8abaf97123058638c41b2202fedaa8c5fd8fbca624498c9e68b648fc30a189ad"
     },
     {
       "path": "packages/devloop-plugin/src/index.js",
@@ -1230,13 +1230,13 @@
     },
     {
       "path": "packages/devloop-plugin/src/manager.js",
-      "bytes": 27490,
-      "sha256": "659d13fc9bd591550e1efe82e940f425c75fa75d2b9f5a956ec21064cb2c3379"
+      "bytes": 29983,
+      "sha256": "1b78c34f198bd7e055c7bd40dafb3e2639fbda0956ad093b66c6dd77a9a5b30d"
     },
     {
       "path": "packages/devloop-plugin/src/tools.js",
-      "bytes": 7924,
-      "sha256": "cd308e9c5c707b33d939c25c8db2f0379837383c8f7e4b03a3c66668133ff5de"
+      "bytes": 8516,
+      "sha256": "692434830383960906ae576fd87e591bc03538cffcba046862504777c58889d3"
     },
     {
       "path": "packages/devloop-plugin/test/bundle.test.js",
@@ -1250,8 +1250,8 @@
     },
     {
       "path": "packages/devloop-plugin/test/index.js",
-      "bytes": 521,
-      "sha256": "cec579713e00b8b3fd59574e12f5a13504a0ed15eba746eeb48f7b3311320372"
+      "bytes": 554,
+      "sha256": "289c2449a196aeaadc9e9ed19fec0377c7bb0d854da02eb14fc83f98dfd0a96a"
     },
     {
       "path": "packages/devloop-plugin/test/install-layout.test.js",
@@ -1260,8 +1260,8 @@
     },
     {
       "path": "packages/devloop-plugin/test/lifecycle.test.js",
-      "bytes": 7362,
-      "sha256": "e1ce9d4e533b4c97bfd4244e59f4d982870bc813f25272b66c3547b36bb4ecd9"
+      "bytes": 7435,
+      "sha256": "5e84800fa517c1b5cdf653f9c2c952494d08e34827925c727a46454e20c4bb92"
     },
     {
       "path": "packages/devloop-plugin/test/plugin.test.js",
@@ -1274,14 +1274,19 @@
       "sha256": "509b11421ca27e736d92d947730f6e95283304cc7f8a13262ab6d3bda284d0ae"
     },
     {
+      "path": "packages/devloop-plugin/test/status-list.test.js",
+      "bytes": 6389,
+      "sha256": "534ca2d536c88af923d8e77b9408f531bbae95dbcb9636871cf09c3ce7dfa2f1"
+    },
+    {
       "path": "packages/devloop-plugin/test/support/harness.js",
       "bytes": 8888,
       "sha256": "a3b760afb86263d8047034e5f165231d69ae516ac0df05cfe6ae4475171f074b"
     },
     {
       "path": "packages/devloop-plugin/test/tools.test.js",
-      "bytes": 6703,
-      "sha256": "9a3e9d9af5c5b2d94c71e0d030df76b95f07c312264649a719bdfddbe6282904"
+      "bytes": 7239,
+      "sha256": "d9a6db40b1e3d9cd74b914103606eb84679d9017d7a4ac5daebe53c4420fdfc2"
     },
     {
       "path": "packages/dsbot-adapter/README.md",
